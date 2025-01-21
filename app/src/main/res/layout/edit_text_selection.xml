@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_weight="1"
+                android:layout_height="0dp">
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/text_selection_textview"
+                android:layout_marginBottom="12dp">
+                <com.ndds.lettersnap.widgets.SelectionEditorTextView
+                    android:id="@+id/selectedText"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:textColor="@color/black"
+                    android:layout_width="match_parent"
+                    android:lineSpacingExtra="10px"
+                    android:paddingStart="@dimen/thumb_size"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="@dimen/thumb_size"
+                    android:layout_height="wrap_content"
+                    />
+            </FrameLayout>
+            </ScrollView>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/action_copy_entire_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Copy entire text" />
+        <Button
+            android:id="@+id/action_copy_selected_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Copy Selected text" />
+        </LinearLayout>
+
+</LinearLayout>

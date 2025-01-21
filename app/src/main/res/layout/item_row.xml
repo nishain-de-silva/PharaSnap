@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:padding="7dp"
+    android:background="@drawable/text_selection_textview"
+    android:gravity="center_vertical"
+    android:theme="@style/Theme.LetterSnap"
+    android:layout_height="wrap_content">
+<androidx.appcompat.widget.AppCompatTextView
+    android:id="@+id/row_item_content"
+    android:layout_weight="1"
+    android:maxLines="3"
+    android:textColor="@color/black"
+    android:layout_width="0dp"
+    android:text="sample text"
+    android:layout_height="wrap_content" />
+    <ImageButton
+        android:id="@+id/row_action_copy_shortcut"
+        android:layout_marginStart="12dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/primary_color_round_rect"
+        android:src="@drawable/copy"
+        />
+
+</LinearLayout>

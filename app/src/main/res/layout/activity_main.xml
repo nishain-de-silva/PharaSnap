@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:gravity="center"
+    android:orientation="vertical"
+    tools:context=".activities.MainActivity">
+    <Button
+        android:id="@+id/open_accessibility"
+        android:layout_width="wrap_content"
+        android:layout_marginTop="48dp"
+        android:layout_height="48dp"
+        android:text="Open Accessibility" />
+
+    <Button
+        android:id="@+id/overlay_permission"
+        android:layout_width="wrap_content"
+        android:layout_marginTop="48dp"
+        android:layout_height="48dp"
+        android:text="Open overlay permission" />
+</LinearLayout>

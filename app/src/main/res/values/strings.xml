@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">LetterSnap</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="accessibility_service_description">We need accessibility to read elements on your screen</string>
+    <string name="text_hint_default">Normal mode. Tap on the text to capture</string>
+    <string name="text_hint_close_overlay">swipe anywhere on screen or tap collapse button to collapse the overlay</string>
+    <string name="app_shortcut_short_label">start overlay widget</string>
+    <string name="app_shortcut_long_label">start widget to copy text on screen</string>
+    <string name="text_selection_modal_title">Change text selection</string>
+    <string name="entry_list_modal_title">Last 20 copied items</string>
+    <string name="text_detection_failed">Could not detect text</string>
+</resources>
