@@ -42,10 +42,10 @@ public class TextHint extends androidx.appcompat.widget.AppCompatTextView {
     }
 
     @Override
-    public void setVisibility(int visibility) {
-        this.visibility = visibility;
+    public void setVisibility(int newVisibility) {
+        this.visibility = newVisibility;
         View parent = (View) getParent();
-        parent.setVisibility(visibility);
+        parent.setVisibility(newVisibility);
     }
 
     public void changeMode(boolean isImageRecognitionMode) {

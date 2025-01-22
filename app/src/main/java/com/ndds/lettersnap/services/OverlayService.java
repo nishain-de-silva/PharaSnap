@@ -28,8 +28,8 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.util.Pair;
+import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -237,7 +237,9 @@ public class OverlayService extends Service {
                     sharedPreferences.edit().remove(Constants.ENTRIES_KEY).apply();
                 });
                 ListView listView = inflatedView.findViewById(R.id.entry_list);
-
+                listView.setEmptyView(
+                        inflatedView.findViewById(R.id.list_empty)
+                );
                 listView.setAdapter(adapter);
             }
         });
@@ -262,15 +264,12 @@ public class OverlayService extends Service {
         }
     }
     private void toggleTextRecognitionMode(boolean skipCountdownTermination) {
-        toggleModeButton.setImageResource(isTextRecognitionEnabled ? R.drawable.text : R.drawable.image);
+        toggleModeButton.setImageResource(isTextRecognitionEnabled ? R.drawable.character : R.drawable.image);
         if (isTextRecognitionEnabled) {
             if (!skipCountdownTermination)
                 startCountdownToTerminateMediaProjection();
         } else {
             if (imageReader == null) {
-                Log.d("info", "requested media projection");
-                if (skipCountdownTermination)
-                    Log.d("info", "Here is the buGGG!");
                 requestMediaProjection();
             } else {
                 if (mediaProjectionIdleHandler != null) {
@@ -296,7 +295,7 @@ public class OverlayService extends Service {
             widgetController.close();
             textHint.changeMode(false);
             isTextRecognitionEnabled = false;
-            toggleModeButton.setImageResource(R.drawable.text);
+            toggleModeButton.setImageResource(R.drawable.character);
             startCountdownToTerminateMediaProjection();
             unregisterReceiver(systemNavigationButtonTapListener);
             systemNavigationButtonTapListener = null;
@@ -305,10 +304,10 @@ public class OverlayService extends Service {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     String reason = intent.getStringExtra("reason");
-                    if (reason != null)
-                        Log.d("info", "recieved a dismiss reason "+reason);
-                    if(Objects.equals(reason, "homekey") || Objects.equals(reason, "recentapps"))
-                        toggleExpandWidget();
+                    if("homekey".equals(reason) || "recentapps".equals(reason)) {
+                        if(isWidgetExpanded)
+                            toggleExpandWidget();
+                    }
                 }
             };
             registerReceiver(systemNavigationButtonTapListener, new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
@@ -326,7 +325,6 @@ public class OverlayService extends Service {
         // Inflate overlay layout
         overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null);
         modal = new Modal(overlayView);
-
 
         // Initial WindowManager params (clicks pass through the overlay)
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
@@ -439,7 +437,7 @@ public class OverlayService extends Service {
                 if(!modal.handleSystemGoBack())
                     toggleExpandWidget();
             }
-        });
+        }, params);
     }
 
 

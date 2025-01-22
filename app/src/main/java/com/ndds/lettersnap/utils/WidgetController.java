@@ -114,7 +114,9 @@ public class WidgetController {
         enableButton.switchToStationaryState();
         rootOverlay.enableTouchListener();
         buttonContainer.setTranslationY(params.y);
+        buttonContainer.setTranslationX(-params.x);
         params.y = 0;
+        params.x = 0;
         params.flags = 0;
         params.height = WindowManager.LayoutParams.MATCH_PARENT;
         params.width = WindowManager.LayoutParams.MATCH_PARENT;
@@ -144,10 +146,12 @@ public class WidgetController {
                 params.height = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.width = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.y = (int) buttonContainer.getTranslationY();
+                params.x = (int) -buttonContainer.getTranslationX();
                 params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-                buttonContainer.setTranslationY(0);
-                buttonContainer.setLayoutParams(buttonContainerLayoutParams);
                 windowManager.updateViewLayout(overlayView, params);
+                buttonContainer.setTranslationY(0);
+                buttonContainer.setTranslationX(0);
+                buttonContainer.setLayoutParams(buttonContainerLayoutParams);
             }
         });
         animatorSet.start();

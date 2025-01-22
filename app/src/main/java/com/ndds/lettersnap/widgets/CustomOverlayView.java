@@ -8,9 +8,11 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
@@ -30,6 +32,7 @@ public class CustomOverlayView extends FrameLayout {
 
     private OnTapListener onTapListener;
     private OnDismissListener onDismissListener;
+    private WindowManager.LayoutParams params;
 
     public static abstract class OnDismissListener {
         protected abstract void onDismiss();
@@ -75,7 +78,8 @@ public class CustomOverlayView extends FrameLayout {
         invalidate();
     }
 
-    public void setOnDismissListener(OnDismissListener onDismissListener) {
+    public void setOnDismissListener(OnDismissListener onDismissListener, WindowManager.LayoutParams params) {
+        this.params = params;
         this.onDismissListener = onDismissListener;
     }
 

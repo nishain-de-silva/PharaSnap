@@ -21,7 +21,7 @@
         <ImageButton
             android:id="@+id/list"
             android:background="@drawable/primary_color_circle"
-            android:src="@drawable/list"
+            android:src="@drawable/recent"
             android:layout_gravity="center_horizontal"
             android:layout_width="@dimen/button_size"
             android:layout_height="@dimen/button_size"
@@ -30,7 +30,7 @@
             android:id="@+id/toggle"
             android:background="@drawable/primary_color_circle"
             android:layout_gravity="center_vertical"
-            android:src="@drawable/text"
+            android:src="@drawable/character"
             android:layout_width="@dimen/button_size"
             android:layout_height="@dimen/button_size"
             />
@@ -89,7 +89,7 @@
             android:layout_height="40dp"
             android:src="@drawable/close"
             android:layout_gravity="end"
-            android:background="@drawable/primary_color_circle"
+            android:background="@drawable/black_color_circle"
             />
     </FrameLayout>
 

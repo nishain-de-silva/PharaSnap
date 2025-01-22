@@ -192,7 +192,6 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
     public void selectAllText() {
         layout = getLayout();
         if (layout == null) {
-            Log.d("info", "layout is still null");
             return;
         };
 
@@ -299,11 +298,6 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-//        if (lineBounds.size() > 0) {
-//            paint.setColor(transparentPrimaryColor);
-//            for (Rect line: lineBounds)
-//                canvas.drawRect(line, paint);
-//        }
         if (selectedTextPath != null) {
             paint.setColor(transparentPrimaryColor);
             canvas.drawPath(selectedTextPath, paint);

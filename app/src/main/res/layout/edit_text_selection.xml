@@ -11,7 +11,7 @@
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/text_selection_textview"
+                android:background="@drawable/text_container"
                 android:layout_marginBottom="12dp">
                 <com.ndds.lettersnap.widgets.SelectionEditorTextView
                     android:id="@+id/selectedText"
@@ -32,12 +32,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/action_copy_entire_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Copy entire text" />
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/action_copy_selected_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

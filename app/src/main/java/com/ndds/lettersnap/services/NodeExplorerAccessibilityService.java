@@ -26,7 +26,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         node.getBoundsInScreen(nodeBound);
         if (nodeBound.contains(coordinateX, coordinateY)) {
             int area = nodeBound.height() * nodeBound.width();
-            if (area <= minArea) {
+            if (area < minArea || (area == minArea && !getText(node).isEmpty())) {
                 selectedNode = node;
                 minArea = area;
             }
@@ -121,9 +121,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     @Override
-    public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
-        Log.d("event type", String.valueOf(accessibilityEvent.getEventType()));
-    }
+    public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {}
 
     @Override
     public void onInterrupt() {

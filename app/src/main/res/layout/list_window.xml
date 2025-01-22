@@ -4,12 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
-    <Button
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/list_clear"
         android:textColor="@android:color/white"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
+        android:background="@drawable/button_background_red"
         android:text="clear all"
         android:layout_marginBottom="12dp"
         />
@@ -19,4 +20,25 @@
         android:dividerHeight="12dp"
         android:layout_height="match_parent">
     </ListView>
+    <LinearLayout
+        android:id="@+id/list_empty"
+        android:visibility="gone"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:gravity="center"
+        android:layout_height="wrap_content">
+        <View
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:background="@drawable/copy"
+            />
+        <androidx.appcompat.widget.AppCompatTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/black"
+            android:textAlignment="center"
+            android:layout_marginTop="12dp"
+            android:text="@string/list_empty_text"
+            />
+    </LinearLayout>
 </LinearLayout>
