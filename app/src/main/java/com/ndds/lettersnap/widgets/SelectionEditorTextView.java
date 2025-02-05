@@ -8,7 +8,6 @@ import android.graphics.Path;
 import android.graphics.Rect;
 import android.text.Layout;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -26,6 +25,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
     int primaryColor, transparentPrimaryColor;
     Paint paint = new Paint();
     private Path selectedTextPath;
+    private float lineSpacingExtra;
 
     //    ArrayList<Rect> lineBounds = new ArrayList<>();
     public SelectionEditorTextView(Context context) {
@@ -57,7 +57,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
         int lineIndex;
         int cursorIndex;
 
-        int lineHeight;
+        float lineHeight;
         Rect cursorThumbRect;
 
         CursorPoint(int offset, int lineIndex) {
@@ -71,7 +71,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
             bounds.offset(paddingInset.x, paddingInset.y);
             int lineTop = bounds.top;
             int lineBottom = bounds.bottom;
-            lineHeight = lineBottom - lineTop;
+            lineHeight = lineBottom - lineTop - lineSpacingExtra;
             cursorIndex = offset;
             cursorCoordinate = new CoordinateF(positionX + paddingInset.x, lineTop + (lineHeight / 2f) + paddingInset.y);
             this.lineIndex = lineIndex;
@@ -89,8 +89,8 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
         }
     }
 
-    void calculateLineBounds() {
-        int curvature = 10;
+    void drawTextSelectionPolygon() {
+        float curvature = lineSpacingExtra;
         Rect[] lineBounds = new Rect[endCursor.lineIndex + 1 - startCursor.lineIndex];
         selectedTextPath = new Path();
 
@@ -117,7 +117,6 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
             bounds.left -= curvature;
             bounds.top -= curvature;
             bounds.right += curvature;
-//            bounds.bottom += curvature;
 
             int previousIndex = i - 1;
             if (previousIndex > -1) {
@@ -144,6 +143,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
 
 
             } else {
+                // top-left section
                 selectedTextPath.moveTo(bounds.left, bounds.top + curvature);
                 selectedTextPath.quadTo(
                         bounds.left, bounds.top,
@@ -158,6 +158,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
             }
 
             if (i == lineBounds.length - 1) {
+                // last bottom-right section
                 selectedTextPath.quadTo(
                         bounds.right, bounds.bottom,
                         bounds.right - curvature, bounds.bottom
@@ -193,32 +194,33 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
         layout = getLayout();
         if (layout == null) {
             return;
-        };
+        }
+        lineSpacingExtra = getLineSpacingExtra();
 
         paddingInset = new Coordinate(getPaddingLeft(), getPaddingTop());
         int lastIndex = getText().length();
         int lastIndexLine = layout.getLineForOffset(lastIndex);
         endCursor = new CursorPoint(lastIndex, lastIndexLine);
         startCursor = new CursorPoint(0, 0);
-        calculateLineBounds();
+        drawTextSelectionPolygon();
 
         setOnTouchListener(new OnTouchListener() {
             CursorSelectionMode selectedCursor = CursorSelectionMode.NOT_SELECTED;
-            CoordinateF tappedCoordinate = new CoordinateF(0, 0);
+            CoordinateF downCoordinate = new CoordinateF(0, 0);
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 int action = motionEvent.getAction();
+                int eventX = (int) motionEvent.getX();
+                int eventY = (int) motionEvent.getY();
 
-                int relativeX = (int) motionEvent.getX();
-                int relativeY = (int) motionEvent.getY();
                 if (action == MotionEvent.ACTION_MOVE) {
                     if (selectedCursor == CursorSelectionMode.NOT_SELECTED) {
                         return true;
                     }
 
                     if (selectedCursor == CursorSelectionMode.SELECTED_START) {
-                        int cursorMovementX = (int) (startCursor.downCursorCoordinate.x + relativeX - tappedCoordinate.x - paddingInset.x);
-                        int cursorMovementY = (int) (startCursor.downCursorCoordinate.y + relativeY - tappedCoordinate.y - paddingInset.y);
+                        int cursorMovementX = (int) (startCursor.downCursorCoordinate.x + eventX - downCoordinate.x - paddingInset.x);
+                        int cursorMovementY = (int) (startCursor.downCursorCoordinate.y + eventY - downCoordinate.y - paddingInset.y);
                         int line = layout.getLineForVertical(cursorMovementY);
                         int offset = layout.getOffsetForHorizontal(line, cursorMovementX);
                         if (offset == startCursor.cursorIndex) return true;
@@ -229,10 +231,11 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
                             endCursor = startCursor;
                             startCursor = reference;
                         }
-                        calculateLineBounds();
+                        drawTextSelectionPolygon();
                     } else if (selectedCursor == CursorSelectionMode.SELECTED_END) {
-                        int cursorMovementX = (int) (endCursor.downCursorCoordinate.x + relativeX - tappedCoordinate.x - paddingInset.x);
-                        int cursorMovementY = (int) (endCursor.downCursorCoordinate.y + relativeY - tappedCoordinate.y - paddingInset.y);
+                        int cursorMovementX = (int) (endCursor.downCursorCoordinate.x + eventX - downCoordinate.x - paddingInset.x);
+                        int cursorMovementY = (int) (endCursor.downCursorCoordinate.y + eventY - downCoordinate.y - paddingInset.y);
+
                         int line = layout.getLineForVertical(cursorMovementY);
                         int offset = layout.getOffsetForHorizontal(line, cursorMovementX);
                         if (offset == endCursor.cursorIndex) return true;
@@ -243,13 +246,13 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
                             startCursor = endCursor;
                             endCursor = reference;
                         }
-                        calculateLineBounds();
+                        drawTextSelectionPolygon();
                     }
                 } else if (action == MotionEvent.ACTION_UP) {
                     if(selectedCursor == CursorSelectionMode.NOT_SELECTED &&
-                            tappedCoordinate.isCloserTo(relativeX, relativeY, 15)) {
-                        int cursorMovementX = relativeX - paddingInset.x;
-                        int cursorMovementY = relativeY - paddingInset.y;
+                            downCoordinate.isCloserTo(eventX, eventY, 15)) {
+                        int cursorMovementX = eventX - paddingInset.x;
+                        int cursorMovementY = eventY - paddingInset.y;
                         int line = layout.getLineForVertical(cursorMovementY);
                         int offset = layout.getOffsetForHorizontal(line, cursorMovementX);
                         CharSequence text = getText();
@@ -269,19 +272,19 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
                         }
                         startCursor.update(startIndex, layout.getLineForOffset(startIndex));
                         endCursor.update(endIndex, layout.getLineForOffset(endIndex));
-                        calculateLineBounds();
+                        drawTextSelectionPolygon();
                     }
                     getParent().requestDisallowInterceptTouchEvent(false);
                     selectedCursor = CursorSelectionMode.NOT_SELECTED;
                 } else if (action == MotionEvent.ACTION_DOWN) {
-                    tappedCoordinate = new CoordinateF(relativeX, relativeY);
+                    downCoordinate = new CoordinateF(eventX, eventY);
 
-                    if (startCursor.cursorThumbRect.contains(relativeX, relativeY)) {
+                    if (startCursor.cursorThumbRect.contains(eventX, eventY)) {
                         selectedCursor = CursorSelectionMode.SELECTED_START;
                         startCursor.recordDownCoordinate();
                         getParent().requestDisallowInterceptTouchEvent(true);
                     }
-                    else if (endCursor.cursorThumbRect.contains(relativeX, relativeY)) {
+                    else if (endCursor.cursorThumbRect.contains(eventX, eventY)) {
                         selectedCursor = CursorSelectionMode.SELECTED_END;
                         endCursor.recordDownCoordinate();
                         getParent().requestDisallowInterceptTouchEvent(true);

@@ -4,8 +4,9 @@
     <string name="accessibility_service_description">We need accessibility to read elements on your screen</string>
     <string name="text_hint_default">Text mode. Tap on the text element to capture</string>
     <string name="text_hint_close_overlay">swipe anywhere on screen or tap collapse button to collapse the overlay</string>
-    <string name="app_shortcut_short_label">start overlay widget</string>
-    <string name="app_shortcut_long_label">start widget to copy text on screen</string>
+    <string name="app_shortcut_short_label">Launch widget</string>
+    <string name="app_shortcut_long_label">Launch widget to copy text on screen</string>
+    <string name="overlay_is_blocked">Overlay widget is prevented from displaying by the current active app</string>
     <string name="text_selection_modal_title">Change text selection</string>
     <string name="entry_list_modal_title">Recent items</string>
     <string name="text_detection_failed">Could not detect any text</string>

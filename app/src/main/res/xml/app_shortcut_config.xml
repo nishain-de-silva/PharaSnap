@@ -2,8 +2,8 @@
     <shortcut
         android:shortcutId="startWidget"
         android:enabled="true"
-        android:icon="@drawable/copy"
-        android:shortcutShortLabel="@string/app_shortcut_long_label"
+        android:icon="@drawable/play"
+        android:shortcutShortLabel="@string/app_shortcut_short_label"
         android:shortcutLongLabel="@string/app_shortcut_long_label"
         >
         <intent

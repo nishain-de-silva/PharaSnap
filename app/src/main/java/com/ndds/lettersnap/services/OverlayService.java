@@ -24,21 +24,24 @@ import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionConfig;
 import android.media.projection.MediaProjectionManager;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.Pair;
-import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -66,7 +69,6 @@ import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class OverlayService extends Service {
     private WindowManager windowManager;
@@ -91,12 +93,14 @@ public class OverlayService extends Service {
     private CustomOverlayView rootOverlay;
 
     private int currentOrientation;
+    private SharedPreferences sharedPreferences;
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -113,7 +117,7 @@ public class OverlayService extends Service {
             mediaProjection.stop();
         }
         if (!preventNotifyOnDestruction)
-            ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
+            notifyStateOnQuickTile(false);
     }
 
     private ScreenInfo getScreenConfiguration() {
@@ -148,7 +152,6 @@ public class OverlayService extends Service {
     }
 
     void saveTextToSharedPreferences(String text) {
-        SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, Context.MODE_PRIVATE);
         ArrayList<String> entries = new ArrayList<>();
         try {
             JSONArray inputJSONArray = new JSONArray(sharedPreferences.getString(Constants.ENTRIES_KEY, "[]"));
@@ -195,7 +198,7 @@ public class OverlayService extends Service {
                 selectedText = inflatedView.findViewById(R.id.selectedText);
                 selectedText.setText(text);
                 inflatedView.findViewById(R.id.action_copy_entire_text).setOnClickListener(v -> {
-                    copyTextAndDismiss(text);
+                    selectedText.selectAllText();
                 });
                 inflatedView.findViewById(R.id.action_copy_selected_text).setOnClickListener(v -> {
                     String text = selectedText.getSelectedText();
@@ -209,7 +212,6 @@ public class OverlayService extends Service {
         modal.showModal(Modal.ModalType.ENTRY_LIST, new Modal.ModalCallback() {
             @Override
             public void onBeforeModalShown(ViewGroup inflatedView) {
-                SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, Context.MODE_PRIVATE);
                 String jsonString = sharedPreferences.getString(Constants.ENTRIES_KEY, "[]");
                 ArrayList<String> items = new ArrayList<>();
                 try {
@@ -257,7 +259,6 @@ public class OverlayService extends Service {
                 mediaProjectionIdlePostRunnable = null;
                 mediaProjectionIdleHandler = null;
                 mediaProjection.stop();
-                stopForeground(true);
             };
             mediaProjectionIdleHandler = new Handler();
             mediaProjectionIdleHandler.postDelayed(mediaProjectionIdlePostRunnable, 1000 * 5);
@@ -293,21 +294,34 @@ public class OverlayService extends Service {
             modal.closeModal();
             rootOverlay.hideBoundingBox();
             widgetController.close();
-            textHint.changeMode(false);
-            isTextRecognitionEnabled = false;
-            toggleModeButton.setImageResource(R.drawable.character);
-            startCountdownToTerminateMediaProjection();
+//            textHint.changeMode(false);
+//            isTextRecognitionEnabled = false;
+//            toggleModeButton.setImageResource(R.drawable.character);
+            if (isTextRecognitionEnabled)
+                startCountdownToTerminateMediaProjection();
             unregisterReceiver(systemNavigationButtonTapListener);
             systemNavigationButtonTapListener = null;
         } else {
+            if (isTextRecognitionEnabled) {
+                if (imageReader == null) {
+                    toggleTextRecognitionMode(true);
+                } else {
+                    if (mediaProjectionIdleHandler != null) {
+                        mediaProjectionIdleHandler.removeCallbacks(mediaProjectionIdlePostRunnable);
+                        mediaProjectionIdlePostRunnable = null;
+                        mediaProjectionIdleHandler = null;
+                    }
+                }
+            }
             systemNavigationButtonTapListener = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    String reason = intent.getStringExtra("reason");
-                    if("homekey".equals(reason) || "recentapps".equals(reason)) {
-                        if(isWidgetExpanded)
-                            toggleExpandWidget();
-                    }
+//                    String reason = intent.getStringExtra("reason");
+//                    if("homekey".equals(reason) || "recentapps".equals(reason)) {
+//
+//                    }
+                    if(isWidgetExpanded)
+                        toggleExpandWidget();
                 }
             };
             registerReceiver(systemNavigationButtonTapListener, new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
@@ -318,7 +332,11 @@ public class OverlayService extends Service {
         isWidgetExpanded = !isWidgetExpanded;
     }
 
-    private void showFloatingWidget(boolean shouldExpand) {
+    private boolean showFloatingWidget(boolean shouldExpand) {
+        if (overlayView != null) {
+            Toast.makeText(this, "Widget is already launched", Toast.LENGTH_SHORT).show();
+            return false;
+        }
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 
@@ -434,13 +452,13 @@ public class OverlayService extends Service {
         rootOverlay.setOnDismissListener(new CustomOverlayView.OnDismissListener() {
             @Override
             protected void onDismiss() {
-                if(!modal.handleSystemGoBack())
+                if(isWidgetExpanded && !modal.handleSystemGoBack())
                     toggleExpandWidget();
             }
         }, params);
+
+        return true;
     }
-
-
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
@@ -456,7 +474,6 @@ public class OverlayService extends Service {
                 mediaProjectionDisplay.setSurface(imageReader.getSurface());
             }
         }
-
     }
 
     private void setIsProcessing(boolean isProcessing) {
@@ -522,7 +539,25 @@ public class OverlayService extends Service {
                     }).addOnCompleteListener(tsk -> setIsProcessing(false));
         }, 100);
     }
-    
+
+    private void runForegroundWithNotification(String title, String description) {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationManager.createNotificationChannel(new NotificationChannel("screen_capture", "Screen Capture Session", NotificationManager.IMPORTANCE_DEFAULT));
+            startForeground(100, new Notification.Builder(OverlayService.this, "screen_capture").
+                    setContentTitle(title)
+                    .setContentText(description)
+                    .build()
+            );
+        } else {
+            startForeground(100, new Notification.Builder(OverlayService.this).
+                    setContentTitle(title)
+                    .setContentText(description)
+                    .build()
+            );
+        }
+    }
+
     private void requestMediaProjection() {
         mediaProjectionManager =
                 (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
@@ -549,21 +584,7 @@ public class OverlayService extends Service {
                     return;
                 }
                 Intent data = intent.getParcelableExtra("data");
-                NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    notificationManager.createNotificationChannel(new NotificationChannel("screen_capture", "Screen Capture Session", NotificationManager.IMPORTANCE_DEFAULT));
-                    startForeground(100, new Notification.Builder(OverlayService.this, "screen_capture").
-                            setContentTitle("Capturing Screenshots")
-                            .setContentText("session to capture screenshots")
-                            .build()
-                    );
-                } else {
-                    startForeground(100, new Notification.Builder(OverlayService.this).
-                            setContentTitle("Capturing Screenshots")
-                            .setContentText("session to capture screenshots")
-                            .build()
-                    );
-                }
+                runForegroundWithNotification("Capturing Screenshots", "session to capture screenshots");
 
                 mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
                 ScreenInfo screenInfo = getScreenConfiguration();
@@ -581,7 +602,7 @@ public class OverlayService extends Service {
                         if (mediaProjectionIdleHandler != null) {
                             mediaProjectionIdleHandler.removeCallbacks(mediaProjectionIdlePostRunnable);
                         }
-                        if (isTextRecognitionEnabled && overlayView != null) {
+                        if (isTextRecognitionEnabled && overlayView != null && isWidgetExpanded) {
                             toggleTextRecognitionMode(true);
                         }
                     }
@@ -601,22 +622,30 @@ public class OverlayService extends Service {
         startActivity(activityIntent);
     }
 
+    private void notifyStateOnQuickTile(boolean newState) {
+        if (newState != sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
+            ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
+    }
+
+    @Override
+    public boolean stopService(Intent name) {
+        if(name.hasExtra(Constants.SKIP_NOTIFY_QUICK_TILE))
+            preventNotifyOnDestruction = true;
+        return super.stopService(name);
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, Context.MODE_PRIVATE);
         if (intent != null) {
-            if (intent.hasExtra("STOP_SERVICE")) {
-                if (intent.hasExtra("SKIP_NOTIFY"))
-                    preventNotifyOnDestruction = true;
-                stopSelf();
-                return START_STICKY;
-            } else {
-                if (!intent.hasExtra("SKIP_NOTIFY")) {
-                    ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
-                    showFloatingWidget(false);
-                } else
-                    showFloatingWidget(true);
-            }
+            if (!intent.hasExtra(Constants.SKIP_NOTIFY_QUICK_TILE)) {
+                if(showFloatingWidget(false))
+                    notifyStateOnQuickTile(true);
+            } else
+                showFloatingWidget(true);
+            return START_NOT_STICKY;
         }
-        return START_STICKY;
+        showFloatingWidget(false);
+        return START_NOT_STICKY;
     }
 }

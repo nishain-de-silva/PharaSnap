@@ -4,30 +4,30 @@
     android:gravity="center_horizontal"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-            <ScrollView
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_weight="1"
+        android:layout_height="0dp">
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/text_container"
+            android:layout_marginBottom="12dp">
+            <com.ndds.lettersnap.widgets.SelectionEditorTextView
+                android:id="@+id/selectedText"
+                android:clickable="true"
+                android:focusable="true"
+                android:textColor="@color/black"
                 android:layout_width="match_parent"
-                android:layout_weight="1"
-                android:layout_height="0dp">
-            <FrameLayout
-                android:layout_width="match_parent"
+                android:lineSpacingExtra="5dp"
+                android:paddingStart="@dimen/thumb_size"
+                android:paddingEnd="10dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="@dimen/thumb_size"
                 android:layout_height="wrap_content"
-                android:background="@drawable/text_container"
-                android:layout_marginBottom="12dp">
-                <com.ndds.lettersnap.widgets.SelectionEditorTextView
-                    android:id="@+id/selectedText"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:textColor="@color/black"
-                    android:layout_width="match_parent"
-                    android:lineSpacingExtra="10px"
-                    android:paddingStart="@dimen/thumb_size"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="@dimen/thumb_size"
-                    android:layout_height="wrap_content"
-                    />
-            </FrameLayout>
-            </ScrollView>
+                />
+        </FrameLayout>
+    </ScrollView>
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -36,7 +36,7 @@
             android:id="@+id/action_copy_entire_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Copy entire text" />
+            android:text="Select all text" />
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/action_copy_selected_text"
             android:layout_width="wrap_content"

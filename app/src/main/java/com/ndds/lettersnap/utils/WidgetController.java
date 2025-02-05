@@ -64,7 +64,7 @@ public class WidgetController {
 
     public void prepareInitialState() {
         overlayView.findViewById(R.id.text_hint).setVisibility(View.GONE);
-        enableButton.setImageResource(R.drawable.play);
+        enableButton.setImageResource(R.drawable.copy);
         enableButton.setBackgroundResource(R.drawable.green_circle);
 
         ViewGroup buttonContainer = overlayView.findViewById(R.id.buttonContainer);
@@ -137,21 +137,21 @@ public class WidgetController {
         animatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                enableButton.setImageResource(R.drawable.play);
+                enableButton.setImageResource(R.drawable.copy);
                 enableButton.setBackgroundResource(R.drawable.green_circle);
                 for(ButtonPosition buttonPosition: buttonPositions)
                     buttonPosition.button.setVisibility(View.GONE);
                 buttonContainerLayoutParams.width = FrameLayout.LayoutParams.WRAP_CONTENT;
                 buttonContainerLayoutParams.height = FrameLayout.LayoutParams.WRAP_CONTENT;
+                buttonContainer.setTranslationY(0);
+                buttonContainer.setTranslationX(0);
+                buttonContainer.setLayoutParams(buttonContainerLayoutParams);
                 params.height = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.width = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.y = (int) buttonContainer.getTranslationY();
                 params.x = (int) -buttonContainer.getTranslationX();
                 params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
                 windowManager.updateViewLayout(overlayView, params);
-                buttonContainer.setTranslationY(0);
-                buttonContainer.setTranslationX(0);
-                buttonContainer.setLayoutParams(buttonContainerLayoutParams);
             }
         });
         animatorSet.start();

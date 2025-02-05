@@ -1,10 +1,13 @@
 package com.ndds.lettersnap.services;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.widget.Toast;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.ndds.lettersnap.activities.NoDisplayHelperActivity;
 import com.ndds.lettersnap.helper.Constants;
@@ -17,6 +20,22 @@ public class ShortcutTileLauncher extends TileService {
         Tile tile = getQsTile();
         tile.setState(Tile.STATE_INACTIVE);
         tile.updateTile();
+        updateTileStatusInStorage(false);
+    }
+
+    @Override
+    public void onTileRemoved() {
+        super.onTileRemoved();
+        updateTileStatusInStorage(false);
+    }
+
+    private void updateTileStatusInStorage(boolean isActive) {
+        SharedPreferences.Editor sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE).edit();
+        if (isActive)
+            sharedPreferences.putBoolean(Constants.TILE_ACTIVE_KEY, true);
+        else
+            sharedPreferences.remove(Constants.TILE_ACTIVE_KEY);
+        sharedPreferences.apply();
     }
 
     int tileState;
@@ -31,11 +50,13 @@ public class ShortcutTileLauncher extends TileService {
         if (tileState == Tile.STATE_ACTIVE) {
             tile.setState(Tile.STATE_INACTIVE);
             tile.updateTile();
+            updateTileStatusInStorage(false);
         } else {
             isAccessibilityServiceRunning = AccessibilityHandler.isAccessibilityServiceEnabled(this);
             canSystemDraw = Settings.canDrawOverlays(this);
             if (isAccessibilityServiceRunning && canSystemDraw) {
                 tile.setState(Tile.STATE_ACTIVE);
+                updateTileStatusInStorage(true);
                 tile.updateTile();
             }
         }
@@ -44,10 +65,8 @@ public class ShortcutTileLauncher extends TileService {
     @Override
     public void onClick() {
         if (tileState == Tile.STATE_ACTIVE) {
-            startService(new Intent(this, OverlayService.class)
-                    .putExtra("STOP_SERVICE", true)
-                    .putExtra("SKIP_NOTIFY", true)
-            );
+            stopService(new Intent(this, OverlayService.class)
+                    .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true));
         } else {
             if (!canSystemDraw) {
                 Toast.makeText(this, "Please provide overlay permission", Toast.LENGTH_SHORT).show();
@@ -58,7 +77,7 @@ public class ShortcutTileLauncher extends TileService {
             }
             if (isAccessibilityServiceRunning) {
                 startService(new Intent(this, OverlayService.class)
-                        .putExtra("SKIP_NOTIFY", true)
+                        .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true)
                 );
                 startActivityAndCollapse(new Intent(this, NoDisplayHelperActivity.class)
                         .putExtra(Constants.IGNORE_SERVICE_LAUNCH, true)
@@ -71,6 +90,4 @@ public class ShortcutTileLauncher extends TileService {
             }
         }
     }
-
-
 }

@@ -69,6 +69,17 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="12dp">
+        <androidx.appcompat.widget.AppCompatTextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:textColor="@android:color/white"
+            android:shadowColor="@android:color/black"
+            android:shadowRadius="0.7"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:text="Swipe anywhere to collapse"
+            />
         <com.ndds.lettersnap.widgets.TextHint
             android:id="@+id/text_hint"
             android:layout_width="wrap_content"

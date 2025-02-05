@@ -1,9 +1,11 @@
 package com.ndds.lettersnap.services;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.graphics.Rect;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
@@ -75,6 +77,12 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     @Override
     public void onCreate() {
         super.onCreate();
+        // when this service is created at phone-reboot or re-created by system my memory cleanup
+        // it will check the current stale active state and turn it off.
+        SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
+        if (sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
+            ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
+
         tileMessageReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -102,8 +110,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 .registerReceiver(tileMessageReceiver, new IntentFilter(Constants.TAPPED_COORDINATE));
     }
 
-
-
     @Override
     public void onDestroy() {
         if (tileMessageReceiver != null) {
@@ -115,9 +121,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     private void removeFloatingWidget() {
-        startService(new Intent(this, OverlayService.class)
-                .putExtra("STOP_SERVICE", true)
-        );
+        stopService(new Intent(this, OverlayService.class));
     }
 
     @Override
