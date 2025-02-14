@@ -5,11 +5,15 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.os.Build;
+import android.util.DisplayMetrics;
 import android.util.Size;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.view.animation.LayoutAnimationController;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 
@@ -117,9 +121,13 @@ public class WidgetController {
         buttonContainer.setTranslationX(-params.x);
         params.y = 0;
         params.x = 0;
-        params.flags = 0;
-        params.height = WindowManager.LayoutParams.MATCH_PARENT;
+        params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
+        params.height = displayMetrics.heightPixels;
         params.width = WindowManager.LayoutParams.MATCH_PARENT;
+        params.gravity = Gravity.TOP;
+        overlayView.setLayoutParams(params);
         windowManager.updateViewLayout(overlayView, params);
 
         FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
@@ -148,6 +156,7 @@ public class WidgetController {
                 buttonContainer.setLayoutParams(buttonContainerLayoutParams);
                 params.height = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.width = WindowManager.LayoutParams.WRAP_CONTENT;
+                params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
                 params.y = (int) buttonContainer.getTranslationY();
                 params.x = (int) -buttonContainer.getTranslationX();
                 params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;

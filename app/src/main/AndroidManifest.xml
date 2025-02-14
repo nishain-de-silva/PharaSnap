@@ -36,14 +36,10 @@
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
             android:theme="@style/Theme.AppCompat.Dialog" />
-
-        <service
-            android:name=".services.OverlayService"
-            android:exported="true"
-            android:foregroundServiceType="mediaProjection" />
         <service
             android:name=".services.NodeExplorerAccessibilityService"
             android:exported="true"
+            android:foregroundServiceType="mediaProjection"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />

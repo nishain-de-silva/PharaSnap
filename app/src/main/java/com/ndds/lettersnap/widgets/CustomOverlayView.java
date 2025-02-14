@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 
@@ -117,7 +118,6 @@ public class CustomOverlayView extends FrameLayout {
                         );
                     }
                 } else if (eventAction == MotionEvent.ACTION_DOWN) {
-                    onTapListener.onTouchDown();
                     downCoordinate = new CoordinateF(x, y);
                     return true;
                 }

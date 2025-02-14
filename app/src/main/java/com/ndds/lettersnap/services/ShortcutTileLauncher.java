@@ -65,8 +65,10 @@ public class ShortcutTileLauncher extends TileService {
     @Override
     public void onClick() {
         if (tileState == Tile.STATE_ACTIVE) {
-            stopService(new Intent(this, OverlayService.class)
-                    .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true));
+            LocalBroadcastManager.getInstance(this)
+                    .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE)
+                            .putExtra(Constants.STOP_WIDGET, true)
+                            .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true));
         } else {
             if (!canSystemDraw) {
                 Toast.makeText(this, "Please provide overlay permission", Toast.LENGTH_SHORT).show();
@@ -76,9 +78,9 @@ public class ShortcutTileLauncher extends TileService {
                 return;
             }
             if (isAccessibilityServiceRunning) {
-                startService(new Intent(this, OverlayService.class)
-                        .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true)
-                );
+                LocalBroadcastManager.getInstance(this)
+                        .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE)
+                                .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true));
                 startActivityAndCollapse(new Intent(this, NoDisplayHelperActivity.class)
                         .putExtra(Constants.IGNORE_SERVICE_LAUNCH, true)
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));

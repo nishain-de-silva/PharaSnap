@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.ndds.lettersnap.widgets.CustomOverlayView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rootOverlay"
+    android:animateLayoutChanges="false"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_gravity="end|center_vertical"
@@ -13,11 +14,11 @@
         android:layout_height="wrap_content" />
     <FrameLayout
         android:id="@+id/buttonContainer"
+        android:animateLayoutChanges="false"
         android:layout_marginEnd="@dimen/button_space"
         android:layout_gravity="end|center_vertical"
         android:layout_width="95dp"
-        android:layout_height="@dimen/button_container_size"
-        >
+        android:layout_height="@dimen/button_container_size">
         <ImageButton
             android:id="@+id/list"
             android:background="@drawable/primary_color_circle"
@@ -41,8 +42,7 @@
             android:layout_gravity="bottom|center_horizontal"
             android:src="@drawable/stop"
             android:layout_width="@dimen/button_size"
-            android:layout_height="@dimen/button_size"
-            />
+            android:layout_height="@dimen/button_size" />
 
         <com.ndds.lettersnap.widgets.EnableButton
             android:id="@+id/toggleCollapse"
@@ -50,9 +50,7 @@
             android:background="@drawable/primary_color_circle"
             android:src="@drawable/collapse"
             android:layout_width="@dimen/button_size"
-            android:layout_height="@dimen/button_size"
-
-            />
+            android:layout_height="@dimen/button_size" />
     </FrameLayout>
     <ProgressBar
         android:id="@+id/loading"
@@ -78,8 +76,7 @@
             android:shadowRadius="0.7"
             android:shadowDx="0"
             android:shadowDy="0"
-            android:text="Swipe anywhere to collapse"
-            />
+            android:text="Swipe anywhere to collapse" />
         <com.ndds.lettersnap.widgets.TextHint
             android:id="@+id/text_hint"
             android:layout_width="wrap_content"
@@ -103,8 +100,6 @@
             android:background="@drawable/black_color_circle"
             />
     </FrameLayout>
-
-
     <include
         android:id="@+id/modal_window"
         layout="@layout/modal"

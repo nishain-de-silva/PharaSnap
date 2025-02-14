@@ -7,9 +7,9 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.ndds.lettersnap.helper.Constants;
-import com.ndds.lettersnap.services.OverlayService;
 import com.ndds.lettersnap.utils.AccessibilityHandler;
 
 public class NoDisplayHelperActivity extends AppCompatActivity {
@@ -24,7 +24,8 @@ public class NoDisplayHelperActivity extends AppCompatActivity {
                 Toast.makeText(this, "Please enable the accessibility service", Toast.LENGTH_SHORT).show();
                 startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
             }  else
-                startService(new Intent(this, OverlayService.class));
+                LocalBroadcastManager.getInstance(this)
+                        .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE));
         }
         finish();
     }
