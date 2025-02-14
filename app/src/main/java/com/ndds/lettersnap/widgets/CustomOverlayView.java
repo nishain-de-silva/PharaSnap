@@ -33,7 +33,6 @@ public class CustomOverlayView extends FrameLayout {
 
     private OnTapListener onTapListener;
     private OnDismissListener onDismissListener;
-    private WindowManager.LayoutParams params;
 
     public static abstract class OnDismissListener {
         protected abstract void onDismiss();
@@ -79,8 +78,7 @@ public class CustomOverlayView extends FrameLayout {
         invalidate();
     }
 
-    public void setOnDismissListener(OnDismissListener onDismissListener, WindowManager.LayoutParams params) {
-        this.params = params;
+    public void setOnDismissListener(OnDismissListener onDismissListener) {
         this.onDismissListener = onDismissListener;
     }
 
@@ -112,7 +110,6 @@ public class CustomOverlayView extends FrameLayout {
                         onTapListener.onTap(new CoordinateF(x, y));
                         return true; // Consume the event
                     } else {
-
                         onTapListener.onDrag(
                                 (float) Math.sqrt(Math.pow(x - downCoordinate.x, 2) + Math.pow(y - downCoordinate.y, 2))
                         );

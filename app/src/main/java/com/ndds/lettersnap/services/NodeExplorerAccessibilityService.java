@@ -30,7 +30,9 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
@@ -327,7 +329,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY: WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT
         );
         params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
@@ -369,14 +371,11 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                     textHint.changeText("Sorry, we are still busy looking for text element you tapped previously");
                     return;
                 }
-                params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-                // has to wait till flag change has taken into effect...
                 overlayView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
                     @Override
                     public void onLayoutChange(View view, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
                         overlayView.removeOnLayoutChangeListener(this);
-                        isAccessibilityServiceBusy = true;
-                        getNodeResult(tappedCoordinate.x, tappedCoordinate.y, !isTextRecognitionEnabled, new OnNodeResult() {
+                        getNodeResult(tappedCoordinate.x, tappedCoordinate.y, !isTextRecognitionEnabled, new NodeCapturedCallback() {
                             @Override
                             void onResult(NodeResult result) {
                                 isAccessibilityServiceBusy = false;
@@ -392,9 +391,10 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                                 showResult(result.bound, result.text);
                             }
                         });
-
                     }
                 });
+
+                params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
                 windowManager.updateViewLayout(overlayView, params);
             }
 
@@ -419,7 +419,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 if(isWidgetExpanded && !modal.handleSystemGoBack())
                     toggleExpandWidget();
             }
-        }, params);
+        });
 
         return true;
     }
@@ -634,14 +634,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         if (contentDescription != null) {
             return contentDescription.toString();
         }
-
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            CharSequence hintText = node.getHintText();
-            if (hintText != null) {
-                return hintText.toString();
-            }
-        }
         return "";
     }
 
@@ -693,24 +685,23 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             this.text = text;
         }
     }
-    static abstract class OnNodeResult {
+    static abstract class NodeCapturedCallback {
         abstract void onResult(NodeResult result);
     }
-    private void getNodeResult(float x, float y, boolean shouldRetrieveText, OnNodeResult onNodeResult) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                selectedNode = null;
-                minArea = Integer.MAX_VALUE;
-                AccessibilityNodeInfo root = getRootInActiveWindow();
-                isInsideElement(root, (int) x, (int) y);
-                freeSearch(root);
-                String extractedText = !shouldRetrieveText || selectedNode == null ? "" : getText(selectedNode).trim();
-                Rect bounds = new Rect();
-                if (selectedNode != null)
-                    selectedNode.getBoundsInScreen(bounds);
-                new Handler(Looper.getMainLooper()).post(() -> onNodeResult.onResult(new NodeResult(bounds, extractedText)));
-            }
+    private void getNodeResult(float x, float y, boolean shouldRetrieveText, NodeCapturedCallback resultCallback) {
+        isAccessibilityServiceBusy = true;
+        new Thread(() -> {
+            selectedNode = null;
+            minArea = Integer.MAX_VALUE;
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            isInsideElement(root, (int) x, (int) y);
+//            freeSearch(root);
+            String extractedText = !shouldRetrieveText || selectedNode == null ? "" : getText(selectedNode).trim();
+            Rect bounds = new Rect();
+            if (selectedNode != null)
+                selectedNode.getBoundsInScreen(bounds);
+
+            new Handler(Looper.getMainLooper()).post(() -> resultCallback.onResult(new NodeResult(bounds, extractedText)));
         }).start();
     }
 
