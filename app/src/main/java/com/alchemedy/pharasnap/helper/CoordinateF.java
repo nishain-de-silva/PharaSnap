@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.helper;
+package com.alchemedy.pharasnap.helper;
 
 public class CoordinateF {
     public float x, y;

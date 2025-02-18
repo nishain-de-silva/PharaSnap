@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.ndds.lettersnap'
+    namespace 'com.alchemedy.pharasnap'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.ndds.lettersnap"
+        applicationId "com.alchemedy.pharasnap"
         minSdk 24
         targetSdk 34
         versionCode 1

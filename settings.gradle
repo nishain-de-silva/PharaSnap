@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LetterSnap"
+rootProject.name = "PharaSnap"
 include ':app'

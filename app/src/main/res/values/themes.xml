@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.LetterSnap.Button" parent="@android:style/Widget.Button">
+    <style name="Theme.PharaSnap.Button" parent="@android:style/Widget.Button">
         <item name="android:background">@drawable/button_background</item>
         <item name="android:paddingStart">12dp</item>
         <item name="android:paddingEnd">12dp</item>
@@ -8,12 +8,12 @@
         <item name="android:paddingBottom">5dp</item>
         <item name="android:textColor">@android:color/white</item>
     </style>
-    <style name="Theme.LetterSnap" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="Theme.PharaSnap" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Primary brand color. -->
 <!--        <item name="colorPrimary">@color/purple_500</item>-->
 <!--        <item name="font">@font/primary</item>-->
         <item name="fontFamily">@font/primary</item>
-        <item name="buttonStyle">@style/Theme.LetterSnap.Button</item>
+        <item name="buttonStyle">@style/Theme.PharaSnap.Button</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:fontFamily">@font/primary</item>
 <!--        <item name="colorPrimaryVariant">@color/purple_700</item>-->
@@ -26,12 +26,12 @@
 <!--        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>-->
         <!-- Customize your theme here. -->
     </style>
-    <style name="Theme.LetterSnap.Alert" parent="Theme.AppCompat.Dialog">
+    <style name="Theme.PharaSnap.Alert" parent="Theme.AppCompat.Dialog">
         <item name="android:backgroundDimEnabled">false</item>
         <item name="windowNoTitle">true</item>
     </style>
     <!-- Base application theme. -->
-    <style name="Base.Theme.LetterSnap" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.PharaSnap" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>

@@ -1,4 +1,4 @@
-package com.ndds.lettersnap;
+package com.alchemedy.pharasnap;
 
 import android.content.Context;
 
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
     public void useAppContext() {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("com.ndds.lettersnap", appContext.getPackageName());
+        assertEquals("com.alchemedy.pharasnap", appContext.getPackageName());
     }
 }

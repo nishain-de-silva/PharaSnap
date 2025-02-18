@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.helper;
+package com.alchemedy.pharasnap.helper;
 
 public class Constants {
     public static final String TILE_ACTIVE_KEY = "isTileActive";

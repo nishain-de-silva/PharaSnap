@@ -1,4 +1,4 @@
-package com.ndds.lettersnap;
+package com.alchemedy.pharasnap;
 
 import org.junit.Test;
 

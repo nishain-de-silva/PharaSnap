@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.activities;
+package com.alchemedy.pharasnap.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -9,8 +9,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.ndds.lettersnap.helper.Constants;
-import com.ndds.lettersnap.utils.AccessibilityHandler;
+import com.alchemedy.pharasnap.helper.Constants;
+import com.alchemedy.pharasnap.utils.AccessibilityHandler;
 
 public class NoDisplayHelperActivity extends AppCompatActivity {
     @Override

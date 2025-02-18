@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.activities;
+package com.alchemedy.pharasnap.activities;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -7,7 +7,7 @@ import android.provider.Settings;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.ndds.lettersnap.R;
+import com.alchemedy.pharasnap.R;
 
 public class MainActivity extends AppCompatActivity {
     @Override

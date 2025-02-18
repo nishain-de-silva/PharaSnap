@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.activities;
+package com.alchemedy.pharasnap.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -10,7 +10,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.ndds.lettersnap.R;
+import com.alchemedy.pharasnap.R;
 
 public class MediaProjectionRequestActivity extends AppCompatActivity {
     @Override

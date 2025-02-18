@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.widgets;
+package com.alchemedy.pharasnap.widgets;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -15,9 +15,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
-import com.ndds.lettersnap.R;
-import com.ndds.lettersnap.helper.Coordinate;
-import com.ndds.lettersnap.helper.CoordinateF;
+import com.alchemedy.pharasnap.R;
+import com.alchemedy.pharasnap.helper.Coordinate;
+import com.alchemedy.pharasnap.helper.CoordinateF;
 
 public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompatTextView {
     CursorPoint startCursor, endCursor;

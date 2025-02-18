@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.services;
+package com.alchemedy.pharasnap.services;
 
 import android.app.Activity;
 import android.app.Notification;
@@ -47,19 +47,19 @@ import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
-import com.ndds.lettersnap.R;
-import com.ndds.lettersnap.activities.MediaProjectionRequestActivity;
-import com.ndds.lettersnap.helper.Constants;
-import com.ndds.lettersnap.helper.CoordinateF;
-import com.ndds.lettersnap.helper.OnTapListener;
-import com.ndds.lettersnap.helper.ScreenInfo;
-import com.ndds.lettersnap.utils.EntryListAdapter;
-import com.ndds.lettersnap.utils.Modal;
-import com.ndds.lettersnap.utils.WidgetController;
-import com.ndds.lettersnap.widgets.CustomOverlayView;
-import com.ndds.lettersnap.widgets.EnableButton;
-import com.ndds.lettersnap.widgets.SelectionEditorTextView;
-import com.ndds.lettersnap.widgets.TextHint;
+import com.alchemedy.pharasnap.R;
+import com.alchemedy.pharasnap.activities.MediaProjectionRequestActivity;
+import com.alchemedy.pharasnap.helper.Constants;
+import com.alchemedy.pharasnap.helper.CoordinateF;
+import com.alchemedy.pharasnap.helper.OnTapListener;
+import com.alchemedy.pharasnap.helper.ScreenInfo;
+import com.alchemedy.pharasnap.utils.EntryListAdapter;
+import com.alchemedy.pharasnap.utils.Modal;
+import com.alchemedy.pharasnap.utils.WidgetController;
+import com.alchemedy.pharasnap.widgets.CustomOverlayView;
+import com.alchemedy.pharasnap.widgets.EnableButton;
+import com.alchemedy.pharasnap.widgets.SelectionEditorTextView;
+import com.alchemedy.pharasnap.widgets.TextHint;
 
 import org.json.JSONArray;
 import org.json.JSONException;

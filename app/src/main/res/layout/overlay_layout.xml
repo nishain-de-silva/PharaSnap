@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.ndds.lettersnap.widgets.CustomOverlayView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.alchemedy.pharasnap.widgets.CustomOverlayView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rootOverlay"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_gravity="end|center_vertical"
-    android:theme="@style/Theme.LetterSnap"
+    android:theme="@style/Theme.PharaSnap"
     android:background="@android:color/transparent">
     <FrameLayout
         android:id="@+id/buttonContainer"
@@ -37,7 +37,7 @@
             android:layout_width="@dimen/button_size"
             android:layout_height="@dimen/button_size" />
 
-        <com.ndds.lettersnap.widgets.EnableButton
+        <com.alchemedy.pharasnap.widgets.EnableButton
             android:id="@+id/toggleCollapse"
             android:layout_gravity="end|center_vertical"
             android:background="@drawable/primary_color_circle"
@@ -70,7 +70,7 @@
             android:shadowDx="0"
             android:shadowDy="0"
             android:text="Swipe anywhere to collapse" />
-        <com.ndds.lettersnap.widgets.TextHint
+        <com.alchemedy.pharasnap.widgets.TextHint
             android:id="@+id/text_hint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -98,4 +98,4 @@
         layout="@layout/modal"
         android:visibility="gone"
         />
-</com.ndds.lettersnap.widgets.CustomOverlayView>
+</com.alchemedy.pharasnap.widgets.CustomOverlayView>

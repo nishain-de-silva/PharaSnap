@@ -1,28 +1,24 @@
-package com.ndds.lettersnap.utils;
+package com.alchemedy.pharasnap.utils;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
-import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.content.Context;
-import android.content.res.Resources;
 import android.os.Build;
-import android.util.DisplayMetrics;
 import android.util.Size;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
-import android.view.animation.LayoutAnimationController;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 
-import com.ndds.lettersnap.R;
-import com.ndds.lettersnap.helper.CoordinateF;
-import com.ndds.lettersnap.widgets.CustomOverlayView;
-import com.ndds.lettersnap.widgets.EnableButton;
+import com.alchemedy.pharasnap.R;
+import com.alchemedy.pharasnap.helper.CoordinateF;
+import com.alchemedy.pharasnap.widgets.CustomOverlayView;
+import com.alchemedy.pharasnap.widgets.EnableButton;
 
 public class WidgetController {
      class ButtonPosition {

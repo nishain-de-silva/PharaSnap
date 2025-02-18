@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">LetterSnap</string>
+    <string name="app_name">PharaSnap</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="accessibility_service_description">We need accessibility to read elements on your screen</string>
     <string name="text_hint_default">Text mode. Tap on the text element to capture</string>

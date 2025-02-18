@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.utils;
+package com.alchemedy.pharasnap.utils;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -10,7 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.ndds.lettersnap.R;
+import com.alchemedy.pharasnap.R;
 
 import java.util.List;
 

@@ -4,7 +4,7 @@
     android:padding="7dp"
     android:background="@drawable/text_container"
     android:gravity="center_vertical"
-    android:theme="@style/Theme.LetterSnap"
+    android:theme="@style/Theme.PharaSnap"
     android:layout_height="wrap_content">
 <androidx.appcompat.widget.AppCompatTextView
     android:id="@+id/row_item_content"

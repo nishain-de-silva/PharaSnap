@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.widgets;
+package com.alchemedy.pharasnap.widgets;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -7,7 +7,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.ndds.lettersnap.R;
+import com.alchemedy.pharasnap.R;
 
 public class TextHint extends androidx.appcompat.widget.AppCompatTextView {
     private int visibility = VISIBLE;

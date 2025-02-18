@@ -8,8 +8,8 @@
         >
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.ndds.lettersnap"
-            android:targetClass="com.ndds.lettersnap.activities.NoDisplayHelperActivity" />
+            android:targetPackage="com.alchemedy.pharasnap"
+            android:targetClass="com.alchemedy.pharasnap.activities.NoDisplayHelperActivity" />
         <!-- If your shortcut is associated with multiple intents, include them
              here. The last intent in the list determines what the user sees when
              they launch this shortcut. -->

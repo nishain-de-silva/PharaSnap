@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.utils;
+package com.alchemedy.pharasnap.utils;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
@@ -7,7 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.ndds.lettersnap.R;
+import com.alchemedy.pharasnap.R;
 
 public class Modal {
     View overlayView;

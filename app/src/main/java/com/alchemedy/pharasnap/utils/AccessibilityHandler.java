@@ -1,11 +1,11 @@
-package com.ndds.lettersnap.utils;
+package com.alchemedy.pharasnap.utils;
 
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.Context;
 import android.content.pm.ServiceInfo;
 import android.view.accessibility.AccessibilityManager;
 
-import com.ndds.lettersnap.services.NodeExplorerAccessibilityService;
+import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
 
 import java.util.List;
 

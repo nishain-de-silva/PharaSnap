@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.services;
+package com.alchemedy.pharasnap.services;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -9,9 +9,9 @@ import android.widget.Toast;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.ndds.lettersnap.activities.NoDisplayHelperActivity;
-import com.ndds.lettersnap.helper.Constants;
-import com.ndds.lettersnap.utils.AccessibilityHandler;
+import com.alchemedy.pharasnap.activities.NoDisplayHelperActivity;
+import com.alchemedy.pharasnap.helper.Constants;
+import com.alchemedy.pharasnap.utils.AccessibilityHandler;
 
 public class ShortcutTileLauncher extends TileService {
     @Override

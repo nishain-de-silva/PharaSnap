@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.widgets;
+package com.alchemedy.pharasnap.widgets;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -6,8 +6,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 
-import com.ndds.lettersnap.helper.CoordinateF;
-import com.ndds.lettersnap.helper.OnTapListener;
+import com.alchemedy.pharasnap.helper.CoordinateF;
+import com.alchemedy.pharasnap.helper.OnTapListener;
 
 public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton {
     OnTapListener onTapListener;

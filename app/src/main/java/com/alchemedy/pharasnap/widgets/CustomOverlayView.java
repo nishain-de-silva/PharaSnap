@@ -1,4 +1,4 @@
-package com.ndds.lettersnap.widgets;
+package com.alchemedy.pharasnap.widgets;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
@@ -8,19 +8,16 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.ndds.lettersnap.helper.OnTapListener;
-import com.ndds.lettersnap.helper.CoordinateF;
+import com.alchemedy.pharasnap.helper.OnTapListener;
+import com.alchemedy.pharasnap.helper.CoordinateF;
 
 public class CustomOverlayView extends FrameLayout {
 
