@@ -30,22 +30,16 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
 import android.view.Gravity;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.mlkit.vision.common.InputImage;
@@ -70,6 +64,7 @@ import com.ndds.lettersnap.widgets.TextHint;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -333,6 +328,22 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 PixelFormat.TRANSLUCENT
         );
         params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        }
+        try {
+            Class<WindowManager.LayoutParams> layoutParamsClass = WindowManager.LayoutParams.class;
+            Field privateFlags = layoutParamsClass.getField("privateFlags");
+            Field noAnim = layoutParamsClass.getField("PRIVATE_FLAG_NO_MOVE_ANIMATION");
+
+            int privateFlagsValue = privateFlags.getInt(params);
+            int noAnimFlag = noAnim.getInt(params);
+
+            privateFlagsValue |= noAnimFlag;
+            privateFlags.setInt(params, privateFlagsValue);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            e.printStackTrace();
+        }
 
         ((EnableButton) overlayView.findViewById(R.id.toggleCollapse))
                 .configure(new OnTapListener() {
@@ -347,7 +358,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
         // Find the button in the overlay
         rootOverlay = overlayView.findViewById(R.id.rootOverlay);
-        rootOverlay.setLayoutTransition(null);
 
         toggleModeButton = overlayView.findViewById(R.id.toggle);
         ImageButton listButton = overlayView.findViewById(R.id.list);
@@ -472,9 +482,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             bounds.top = Math.max(bounds.top, 0);
 
             Bitmap croppedImage = Bitmap.createBitmap(screenBitmap, bounds.left, bounds.top, bounds.width(), bounds.height());
-//            ImageView debugImage = overlayView.findViewById(R.id.debug_image);
-//            debugImage.setVisibility(View.VISIBLE);
-//            debugImage.setImageBitmap(croppedImage);
             setIsProcessing(true);
             recognizer.process(
                             InputImage.fromBitmap(croppedImage, 0)
@@ -626,7 +633,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
     private String getText(AccessibilityNodeInfo node) {
         CharSequence nodeText = node.getText();
-        if (nodeText != null) {
+        if (nodeText != null && !nodeText.toString().isEmpty()) {
             return nodeText.toString();
         }
 

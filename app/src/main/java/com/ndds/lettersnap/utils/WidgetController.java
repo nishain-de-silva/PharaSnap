@@ -3,8 +3,10 @@ package com.ndds.lettersnap.utils;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
+import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.content.res.Resources;
 import android.os.Build;
 import android.util.DisplayMetrics;
 import android.util.Size;
@@ -122,9 +124,11 @@ public class WidgetController {
         params.y = 0;
         params.x = 0;
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
-        DisplayMetrics displayMetrics = new DisplayMetrics();
-        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
-        params.height = displayMetrics.heightPixels;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            params.height = windowManager.getCurrentWindowMetrics().getBounds().height() - windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars()).bottom;
+        } else
+            params.height = WindowManager.LayoutParams.MATCH_PARENT;
         params.width = WindowManager.LayoutParams.MATCH_PARENT;
         params.gravity = Gravity.TOP;
         overlayView.setLayoutParams(params);
@@ -133,6 +137,9 @@ public class WidgetController {
         FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
         buttonContainerLayoutParams.height = buttonContainerSize.getHeight();
         buttonContainerLayoutParams.width = buttonContainerSize.getWidth();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            buttonContainerLayoutParams.topMargin = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars()).bottom / 2;
+        }
         buttonContainer.setLayoutParams(buttonContainerLayoutParams);
         playButtonTranslation(true).start();
     }
@@ -151,14 +158,18 @@ public class WidgetController {
                     buttonPosition.button.setVisibility(View.GONE);
                 buttonContainerLayoutParams.width = FrameLayout.LayoutParams.WRAP_CONTENT;
                 buttonContainerLayoutParams.height = FrameLayout.LayoutParams.WRAP_CONTENT;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    buttonContainerLayoutParams.topMargin = 0;
+                }
+                params.y = (int) buttonContainer.getTranslationY();
+                params.x = (int) -buttonContainer.getTranslationX();
                 buttonContainer.setTranslationY(0);
                 buttonContainer.setTranslationX(0);
                 buttonContainer.setLayoutParams(buttonContainerLayoutParams);
                 params.height = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.width = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
-                params.y = (int) buttonContainer.getTranslationY();
-                params.x = (int) -buttonContainer.getTranslationX();
+
                 params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
                 windowManager.updateViewLayout(overlayView, params);
             }
