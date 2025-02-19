@@ -1,6 +1,8 @@
 package com.alchemedy.pharasnap.activities;
 
+import android.app.StatusBarManager;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -8,14 +10,16 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
-import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.alchemedy.pharasnap.BuildConfig;
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.utils.AccessibilityHandler;
+import com.alchemedy.pharasnap.utils.WidgetController;
 import com.alchemedy.pharasnap.widgets.WalkthroughSlider;
 
 import java.util.ArrayList;
@@ -25,10 +29,11 @@ public class MainActivity extends AppCompatActivity {
     BroadcastReceiver tileAddedSignalBroadcastListener;
     boolean needToDisplayInitialWalkthrough = false;
     private ArrayList<WalkthroughSlider.PageContent> pages = new ArrayList<>();
+    private SharedPreferences sharedPreferences;
 
     private void addTutorials(boolean isTutorialRestart) {
-        pages.add(0, new WalkthroughSlider.PageContent(R.string.introduction));
-        WalkthroughSlider.PageContent secondPage = new WalkthroughSlider.PageContent(R.string.add_tile_description);
+        pages.add(0, new WalkthroughSlider.PageContent(R.string.introduction, "Introduction"));
+        WalkthroughSlider.PageContent secondPage = new WalkthroughSlider.PageContent(R.string.add_tile_description, "Notification Shortcut");
         if (!isTutorialRestart) {
             secondPage
                     .setButtonText("Skip", true)
@@ -51,35 +56,22 @@ public class MainActivity extends AppCompatActivity {
 
         pages.add(secondPage);
         pages.add(new WalkthroughSlider.PageContent(
-                R.string.control_use_tutorial
+                R.string.control_use_tutorial,
+                "Capture Modes"
         ));
-        pages.add(new WalkthroughSlider.PageContent(R.string.control_use_tutorial_extended));
+        pages.add(new WalkthroughSlider.PageContent(R.string.control_use_tutorial_extended, "Final bit"));
     }
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        pages = new ArrayList<>();
-        SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
-        needToDisplayInitialWalkthrough = !sharedPreferences.getBoolean(Constants.IS_TUTORIAL_SHOWN, false);
+
+    private void showWalkthroughSlider() {
+        setContentView(R.layout.introduction_layout);
         walkthroughSlider = findViewById(R.id.walkthrough_slider);
-        if(!AccessibilityHandler.isAccessibilityServiceEnabled(this))
-            pages.add(new WalkthroughSlider.PageContent(
-                    R.string.accessibility_requirement_description
-            ).setButtonText("Grant Accessibility Permission", false));
-        if (!Settings.canDrawOverlays(this))
-            pages.add(new WalkthroughSlider.PageContent(R.string.overlay_requirement_description).setButtonText("Grant overdraw permission", false));
-
-
-        if(needToDisplayInitialWalkthrough) {
-            addTutorials(false);
-        }
-
         walkthroughSlider.start(pages, new WalkthroughSlider.EventHandler() {
             @Override
             public boolean onResume(int id) {
-                if (id == R.string.accessibility_requirement_description) return AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this);
-                if (id == R.string.overlay_requirement_description) return Settings.canDrawOverlays(MainActivity.this);
+                if (id == R.string.accessibility_requirement_description)
+                    return AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this);
+                if (id == R.string.overlay_requirement_description)
+                    return Settings.canDrawOverlays(MainActivity.this);
 
                 return false;
             }
@@ -103,34 +95,66 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onComplete() {
-                walkthroughSlider.setVisibility(View.GONE);
-                findViewById(R.id.bottom_button_layer)
-                        .setVisibility(View.VISIBLE);
+                showMainMenu();
+                pages.clear();
                 sharedPreferences.edit().putBoolean(Constants.IS_TUTORIAL_SHOWN, true).apply();
             }
         });
-        Button launchButton = findViewById(R.id.launch_widget);
+    }
+
+    private void showMainMenu() {
+        setContentView(R.layout.activity_main);
+        walkthroughSlider = null;
+        View launchButton = findViewById(R.id.launch_widget);
+
         launchButton.setOnClickListener(v -> {
-            LocalBroadcastManager.getInstance(this)
-                    .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE));
+            WidgetController.launchWidget(this);
         });
+        TextView versionLabel = findViewById(R.id.version_label);
+        versionLabel.setText(versionLabel.getText().toString()
+                .replace("code", String.valueOf(BuildConfig.VERSION_CODE))
+                .replace("x.x", BuildConfig.VERSION_NAME)
+        );
         findViewById(R.id.restart_tutorial).setOnClickListener(v -> {
-            pages.clear();
-            walkthroughSlider.setVisibility(View.VISIBLE);
-            findViewById(R.id.bottom_button_layer).setVisibility(View.GONE);
             addTutorials(true);
-            walkthroughSlider.start(pages, null);
+            showWalkthroughSlider();
         });
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        pages = new ArrayList<>();
+        sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
+        needToDisplayInitialWalkthrough = !sharedPreferences.getBoolean(Constants.IS_TUTORIAL_SHOWN, false);
+
+        if(!AccessibilityHandler.isAccessibilityServiceEnabled(this))
+            pages.add(new WalkthroughSlider.PageContent(
+                    R.string.accessibility_requirement_description,
+                    "Accessibility Required"
+            ).setButtonText("Grant Accessibility Permission", false));
+        if (!Settings.canDrawOverlays(this))
+            pages.add(new WalkthroughSlider.PageContent(
+                    R.string.overlay_requirement_description,
+                    "Overlay Permission Required"
+            )
+                    .setButtonText("Grant Draw Overlay Permission", false));
+
+        if(needToDisplayInitialWalkthrough) {
+            addTutorials(false);
+        }
         if (pages.size() > 0)
-            findViewById(R.id.bottom_button_layer).setVisibility(View.GONE);
+            showWalkthroughSlider();
         else
-            walkthroughSlider.setVisibility(View.GONE);
+            showMainMenu();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        walkthroughSlider.onActivityResume();
+        if (walkthroughSlider != null)
+            walkthroughSlider.onActivityResume();
     }
 
     @Override

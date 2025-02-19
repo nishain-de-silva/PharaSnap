@@ -28,12 +28,13 @@ public class WalkthroughSlider extends LinearLayout {
         public static abstract class CreateCallback {
             protected abstract void onCreate();
         }
-        String buttonTitle;
+        String buttonTitle, title;
         int contentId;
         boolean canRevisit = true;
         CreateCallback createCallback;
-        public PageContent(int contentId) {
+        public PageContent(int contentId, String title) {
             this.contentId = contentId;
+            this.title = title;
         }
 
         public PageContent onCreate(CreateCallback createCallback) {
@@ -63,6 +64,8 @@ public class WalkthroughSlider extends LinearLayout {
         ViewGroup inflatedPage = (ViewGroup) LayoutInflater.from(getContext()).inflate(R.layout.walkthrough_page, null);
         ((TextView) inflatedPage.findViewById(R.id.page_content)).setText(page.contentId);
         inflatedPage.findViewById(R.id.task_complete_indicator).setVisibility(GONE);
+        TextView paginationIndicator = inflatedPage.findViewById(R.id.pagination_indicator);
+        paginationIndicator.setText(String.format("%d / %d", currentIndex + 1, list.size()));
         Button previousButton = inflatedPage.findViewById(R.id.page_previous);
         if (currentIndex > 0 && list.get(currentIndex - 1).canRevisit) {
             previousButton.setOnClickListener(v -> {
@@ -70,7 +73,7 @@ public class WalkthroughSlider extends LinearLayout {
             });
         } else
             previousButton.setVisibility(GONE);
-
+        ((TextView) inflatedPage.findViewById(R.id.page_title)).setText(page.title);
         Button actionButton = inflatedPage.findViewById(R.id.page_continue);
         actionButton.setText(page.buttonTitle != null ? page.buttonTitle :
                 getDefaultButtonText()

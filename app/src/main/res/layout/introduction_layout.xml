@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    android:paddingTop="45dp"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activities.MainActivity">
+    <com.alchemedy.pharasnap.widgets.WalkthroughSlider
+        android:layout_gravity="center"
+        android:id="@+id/walkthrough_slider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+</FrameLayout>

@@ -1,26 +1,25 @@
 <resources>
     <string name="app_name">PharaSnap</string>
     <string name="title_activity_main">MainActivity</string>
-    <string name="accessibility_service_description">We need accessibility to read elements on your screen</string>
+    <string name="accessibility_service_description">PharaSnap need access to android accessibility framework to read text on your screen as well as to identify where the text elements are placed on the screen when you tap on them.</string>
     <string name="text_hint_default">Text mode. Tap on the text element to capture</string>
     <string name="text_hint_close_overlay">swipe anywhere on screen or tap collapse button to collapse the overlay</string>
     <string name="app_shortcut_short_label">Launch widget</string>
     <string name="app_shortcut_long_label">Launch widget to copy text on screen</string>
-    <string name="overlay_is_blocked">Overlay widget is prevented from displaying by the current active app</string>
     <string name="text_selection_modal_title">Change text selection</string>
     <string name="entry_list_modal_title">Recent items</string>
     <string name="text_detection_failed">Could not detect any text</string>
     <string name="list_empty_text">No entries yet! This your last 20 recent item list. When a text is identified it will be shown here</string>
     <string name="accessibility_requirement_description">Accessibility services helps app read content on the screen in this case accessibility permission is required to read text on screen and on other apps. On the settings, select this app and enable accessibility permission</string>
-    <string name="overlay_requirement_description">When using this tool a hovering widget displayed over other apps. Please grant permission to draw over other apps</string>
-    <string name="introduction">PharaSnap can help you copy text on the screen even on places where you cannot directly copy text</string>
-    <string name="add_tile_description">To make this tool easily accessible to use add the quick shortcut in your notification panel. Open your notification panel, in the top section you can edit action shortcut and add the app shortcut with title "Capture Text"
+    <string name="overlay_requirement_description">When using this tool a floating widget displayed over the screen. Please grant permission to draw over other apps. Don\'t worry you can stop the widget when not in use.</string>
+    <string name="introduction">PharaSnap can help you copy text on the screen even on places where you don\'t have the facility directly copy text to clipboard. PharaSnap can even capture text on images without ever leaving the app</string>
+    <string name="add_tile_description">To make this tool easily accessible to use add the quick shortcut in your notification panel. Open your notification panel, in the top section (quick settings panel) then tap to customize the panel and add the shortcut tile provided by this app to the active area. Drag and place it on a convenient place
         \n\nAnother way to open the widget is by long pressing the app launch icon which prompt you open the widget.
     </string>
     <string name="control_use_tutorial">When capturing text there are two modes,
-        \n1. Normal mode where you simply tap on text element on screen to capture.
-        \n2. Image mode uses text recognition OCR (for now only support latin characters) to capture text on images.
+        \n1) Normal mode where you simply tap on text element on screen to capture.
+        \n\n2) Image mode uses text recognition OCR (for now only support latin characters) to capture text on images.
         \nWhen switching to Image mode the app request screen capture in order to visually see the image on the screen. Screen capturing would automatically turn off after few seconds if you leave Image mode
         \n\nYou can toggle between the two modes on left-most button on the widget.</string>
-    <string name="control_use_tutorial_extended">Once you tap on the text on screen (not dragging) it would get highlighted and copied to clipboard. You can optionally change the text selection which copied.\nYou can also view your last 20 copied item in recent list.</string>
+    <string name="control_use_tutorial_extended">Once you tap on the text on screen (not drag and select) it would get highlighted and copied to clipboard. You can optionally change the text selection which copied.\nYou can also view your last copied items in the recent list from the floating widget itself.</string>
 </resources>

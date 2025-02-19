@@ -6,6 +6,8 @@
     <color name="primaryLight">#F8D4AA</color>
     <color name="primaryDark">#905917</color>
     <color name="primaryTransparent">#79EC8910</color>
+    <color name="darkPurple">#0D203B</color>
+    <color name="darkPurpleTransparent">#280D203B</color>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>

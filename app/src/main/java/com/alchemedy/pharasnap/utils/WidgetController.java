@@ -5,7 +5,9 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
+import android.provider.Settings;
 import android.util.Size;
 import android.view.Gravity;
 import android.view.View;
@@ -14,13 +16,28 @@ import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.Toast;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.alchemedy.pharasnap.R;
+import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 
 public class WidgetController {
+    public static void launchWidget(Context context) {
+        if(!Settings.canDrawOverlays(context)) {
+            Toast.makeText(context, "Please provide overlay permission", Toast.LENGTH_SHORT).show();
+            context.startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION));
+        } else if (!AccessibilityHandler.isAccessibilityServiceEnabled(context)) {
+            Toast.makeText(context, "Please enable the accessibility service", Toast.LENGTH_SHORT).show();
+            context.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        }  else
+            LocalBroadcastManager.getInstance(context)
+                    .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE));
+    }
      class ButtonPosition {
         ImageButton button;
         CoordinateF position;

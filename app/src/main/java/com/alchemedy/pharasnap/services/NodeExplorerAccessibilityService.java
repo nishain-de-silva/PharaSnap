@@ -1,6 +1,7 @@
 package com.alchemedy.pharasnap.services;
 
 import android.app.Activity;
+import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -33,6 +34,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -187,6 +189,11 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     void showEntryList() {
+        KeyguardManager keyguardManager = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+        if(keyguardManager.isKeyguardLocked()) {
+            textHint.changeText("Sorry cannot show recent items when device is locked");
+            return;
+        }
         modal.showModal(Modal.ModalType.ENTRY_LIST, new Modal.ModalCallback() {
             @Override
             public void onBeforeModalShown(ViewGroup inflatedView) {
@@ -274,6 +281,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 startCountdownToTerminateMediaProjection();
             unregisterReceiver(systemNavigationButtonTapListener);
             systemNavigationButtonTapListener = null;
+            textHint.setVisibility(View.GONE);
         } else {
             if (isTextRecognitionEnabled) {
                 if (imageReader == null) {
@@ -297,11 +305,11 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                         toggleExpandWidget();
                 }
             };
+            textHint.changeMode(isTextRecognitionEnabled);
             registerReceiver(systemNavigationButtonTapListener, new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
             widgetController.open();
         }
 
-        textHint.setVisibility(isWidgetExpanded ? View.GONE : View.VISIBLE);
         isWidgetExpanded = !isWidgetExpanded;
     }
 
@@ -324,25 +332,30 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY: WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED,
                 PixelFormat.TRANSLUCENT
         );
         params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
         }
-        try {
-            Class<WindowManager.LayoutParams> layoutParamsClass = WindowManager.LayoutParams.class;
-            Field privateFlags = layoutParamsClass.getField("privateFlags");
-            Field noAnim = layoutParamsClass.getField("PRIVATE_FLAG_NO_MOVE_ANIMATION");
 
-            int privateFlagsValue = privateFlags.getInt(params);
-            int noAnimFlag = noAnim.getInt(params);
+        if (Build.VERSION.SDK_INT >= 34) {
+            params.setCanPlayMoveAnimation(false);
+        } else {
+            try {
+                Class<WindowManager.LayoutParams> layoutParamsClass = WindowManager.LayoutParams.class;
+                Field privateFlags = layoutParamsClass.getField("privateFlags");
+                Field noAnim = layoutParamsClass.getField("PRIVATE_FLAG_NO_MOVE_ANIMATION");
 
-            privateFlagsValue |= noAnimFlag;
-            privateFlags.setInt(params, privateFlagsValue);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            e.printStackTrace();
+                int privateFlagsValue = privateFlags.getInt(params);
+                int noAnimFlag = noAnim.getInt(params);
+
+                privateFlagsValue |= noAnimFlag;
+                privateFlags.setInt(params, privateFlagsValue);
+            } catch (IllegalAccessException | NoSuchFieldException e) {
+                e.printStackTrace();
+            }
         }
 
         ((EnableButton) overlayView.findViewById(R.id.toggleCollapse))
