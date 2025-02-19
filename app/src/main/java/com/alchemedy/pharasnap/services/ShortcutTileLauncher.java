@@ -22,15 +22,14 @@ public class ShortcutTileLauncher extends TileService {
         tile.updateTile();
         updateTileStatusInStorage(false);
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
-        if(sharedPreferences.getBoolean(Constants.TUTORIAL_TILE_ADDED, false)) {
-            sharedPreferences.edit().remove(Constants.TUTORIAL_TILE_ADDED).apply();
+        if(!sharedPreferences.getBoolean(Constants.IS_TUTORIAL_SHOWN, false)) {
+            LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(Constants.TILE_ADDED_WHILE_TUTORIAL));
         }
     }
 
     @Override
     public void onTileRemoved() {
         super.onTileRemoved();
-
         updateTileStatusInStorage(false);
     }
 

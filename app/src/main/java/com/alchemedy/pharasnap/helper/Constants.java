@@ -6,7 +6,8 @@ public class Constants {
     public static final String STOP_WIDGET = "stopWidget";
     public static final String SKIP_NOTIFY_QUICK_TILE = "skipNotify";
     public static final String ENTRIES_KEY = "entries";
-    public static final String TUTORIAL_TILE_ADDED = "tutorialTileAdded";
+    public static final String IS_TUTORIAL_SHOWN = "isTutorialShown";
+    public static final String TILE_ADDED_WHILE_TUTORIAL = "tileAddedWhileTutorial";
     public static final String IGNORE_SERVICE_LAUNCH = "ignoreServiceLaunch";
     public static final String SHARED_PREFERENCE_KEY = "default";
 
