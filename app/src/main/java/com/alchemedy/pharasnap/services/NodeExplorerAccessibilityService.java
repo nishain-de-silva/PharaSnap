@@ -15,6 +15,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.Insets;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
@@ -27,6 +28,7 @@ import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcel;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
@@ -35,13 +37,18 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.mlkit.vision.common.InputImage;
@@ -69,7 +76,6 @@ import org.json.JSONException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-
 public class NodeExplorerAccessibilityService extends android.accessibilityservice.AccessibilityService {
     private WindowManager windowManager;
     private View overlayView;
@@ -331,11 +337,11 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY: WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT
         );
-        params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
         }
@@ -365,10 +371,19 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                         toggleExpandWidget();
                     }
                 }, overlayView, windowManager, params);
+
+        widgetController = new WidgetController(this, windowManager, params, overlayView);
+        if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
+                widgetController.landscapeNavigationBarOffset = Math.max(navigationBarInset.left, navigationBarInset.right);
+                params.x = widgetController.landscapeNavigationBarOffset;
+            }
+        }
+        params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
+
         // Add the overlay view
         windowManager.addView(overlayView, params);
-        widgetController = new WidgetController(this, windowManager, params, overlayView);
-
         // Find the button in the overlay
         rootOverlay = overlayView.findViewById(R.id.rootOverlay);
 
@@ -460,11 +475,21 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 imageReader = ImageReader.newInstance(screenInfo.width, screenInfo.height, PixelFormat.RGBA_8888, 1);
                 mediaProjectionDisplay.setSurface(imageReader.getSurface());
             }
-            DisplayMetrics displayMetrics = new DisplayMetrics();
-            windowManager.getDefaultDisplay().getMetrics(displayMetrics);
-            WindowManager.LayoutParams params = (WindowManager.LayoutParams) overlayView.getLayoutParams();
-            params.height = displayMetrics.heightPixels;
-            windowManager.updateViewLayout(overlayView, params);
+
+            ViewGroup buttonContainer = overlayView.findViewById(R.id.buttonContainer);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                FrameLayout.LayoutParams buttonContainerParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
+                widgetController.determineOverlayExpandedDimension(buttonContainerParams, isWidgetExpanded, true);
+            } else {
+                if(isWidgetExpanded)
+                    buttonContainer.setTranslationX(0);
+                else {
+                    WindowManager.LayoutParams params = (WindowManager.LayoutParams) overlayView.getLayoutParams();
+                    params.x = 0;
+                    windowManager.updateViewLayout(overlayView, params);
+                }
+            }
         }
     }
 

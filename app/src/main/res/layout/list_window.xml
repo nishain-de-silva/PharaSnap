@@ -18,6 +18,7 @@
         android:id="@+id/entry_list"
         android:layout_width="match_parent"
         android:dividerHeight="12dp"
+        android:divider="@android:color/transparent"
         android:layout_height="match_parent">
     </ListView>
     <LinearLayout
