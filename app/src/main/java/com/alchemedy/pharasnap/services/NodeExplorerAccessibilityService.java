@@ -44,6 +44,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -502,11 +503,14 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     void processScreenshot(Rect bounds, int tappedCoordinateX, int tappedCoordinateY) {
         overlayView.findViewById(R.id.buttonContainer).setVisibility(View.GONE);
         TextHint textHint = overlayView.findViewById(R.id.text_hint);
+//        ImageView debugImage = overlayView.findViewById(R.id.debug_image);
         textHint.setVisibility(View.GONE);
+//        debugImage.setVisibility(View.GONE);
         new Handler().postDelayed(() -> {
             Image image = imageReader.acquireLatestImage();
             overlayView.findViewById(R.id.buttonContainer).setVisibility(View.VISIBLE);
             textHint.setVisibility(View.VISIBLE);
+//            debugImage.setVisibility(View.VISIBLE);
             Image.Plane plane = image.getPlanes()[0];
 
             Bitmap screenBitmap = Bitmap.createBitmap(plane.getRowStride() / plane.getPixelStride(),
@@ -521,6 +525,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
             Bitmap croppedImage = Bitmap.createBitmap(screenBitmap, bounds.left, bounds.top, bounds.width(), bounds.height());
             setIsProcessing(true);
+//            debugImage.setImageBitmap(croppedImage);
             recognizer.process(
                             InputImage.fromBitmap(croppedImage, 0)
                     )
@@ -655,7 +660,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         node.getBoundsInScreen(nodeBound);
         if (nodeBound.contains(coordinateX, coordinateY)) {
             int area = nodeBound.height() * nodeBound.width();
-            if (area < minArea || (area == minArea && !getText(node).isEmpty())) {
+            if ((area < minArea || (area == minArea && !getText(node).isEmpty())) && node.isVisibleToUser()) {
                 selectedNode = node;
                 minArea = area;
             }
