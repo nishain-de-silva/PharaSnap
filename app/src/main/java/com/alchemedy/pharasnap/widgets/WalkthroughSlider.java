@@ -57,7 +57,7 @@ public class WalkthroughSlider extends LinearLayout {
     private String getDefaultButtonText() {
         return  currentIndex == (list.size() - 1) ? "Finish" : "Next";
     }
-    private void loadPage(boolean animateForwardDirection) {
+    private void loadPage(boolean animateForwardDirection, boolean isPageReload) {
         int initialWidth = getWidth();
         removeAllViews();
         PageContent page = list.get(currentIndex);
@@ -86,17 +86,19 @@ public class WalkthroughSlider extends LinearLayout {
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
         ));
-        if (page.createCallback != null)
-            page.createCallback.onCreate();
-        if (currentIndex > 0 || !animateForwardDirection) {
-            ValueAnimator entryAnimator = ValueAnimator.ofFloat(0, 1);
-            entryAnimator.addUpdateListener(valueAnimator -> {
-                float frameFraction = valueAnimator.getAnimatedFraction();
-                setTranslationX((animateForwardDirection ? 1 : -1) * initialWidth * (1 - frameFraction));
-                setAlpha(frameFraction);
-            });
-            entryAnimator.setDuration(350);
-            entryAnimator.start();
+        if (!isPageReload) {
+            if (page.createCallback != null)
+                page.createCallback.onCreate();
+            if (currentIndex > 0 || !animateForwardDirection) {
+                ValueAnimator entryAnimator = ValueAnimator.ofFloat(0, 1);
+                entryAnimator.addUpdateListener(valueAnimator -> {
+                    float frameFraction = valueAnimator.getAnimatedFraction();
+                    setTranslationX((animateForwardDirection ? 1 : -1) * initialWidth * (1 - frameFraction));
+                    setAlpha(frameFraction);
+                });
+                entryAnimator.setDuration(350);
+                entryAnimator.start();
+            }
         }
     }
 
@@ -113,7 +115,7 @@ public class WalkthroughSlider extends LinearLayout {
             setTranslationX(frameFraction * (isForwardDirection ? -1 : 1) * getWidth());
             setAlpha(1 - frameFraction);
             if (frameFraction == 1) {
-                loadPage(isForwardDirection);
+                loadPage(isForwardDirection, false);
             }
         });
         animator.setDuration(350);
@@ -126,7 +128,7 @@ public class WalkthroughSlider extends LinearLayout {
         if (eventHandler != null)
             this.eventHandler = eventHandler;
         if (list.size() == 0) return;
-        loadPage(true);
+        loadPage(true, false);
     }
 
     public WalkthroughSlider(Context context, @Nullable AttributeSet attrs) {
@@ -151,8 +153,12 @@ public class WalkthroughSlider extends LinearLayout {
         if (list.size() > 0
                 && currentIndex > -1
                 && currentIndex < list.size()
-                && eventHandler.onResume(list.get(currentIndex).contentId)
-        )
-            indicateTaskCompleted("Completed");
+        ) {
+            if (eventHandler.onResume(list.get(currentIndex).contentId))
+                indicateTaskCompleted("Completed");
+            else
+                loadPage(true, true);
+        }
+
     }
 }
