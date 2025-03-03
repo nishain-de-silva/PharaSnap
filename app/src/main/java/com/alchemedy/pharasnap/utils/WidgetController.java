@@ -4,9 +4,11 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.Insets;
 import android.os.Build;
 import android.provider.Settings;
@@ -20,6 +22,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -31,7 +34,7 @@ import com.alchemedy.pharasnap.widgets.EnableButton;
 
 public class WidgetController {
     public static void launchWidget(Context context) {
-        if(!Settings.canDrawOverlays(context)) {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
             Toast.makeText(context, "Please provide overlay permission", Toast.LENGTH_SHORT).show();
             context.startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION));
         } else if (!AccessibilityHandler.isAccessibilityServiceEnabled(context)) {
@@ -44,43 +47,35 @@ public class WidgetController {
      class ButtonPosition {
         ImageButton button;
         CoordinateF position;
-        ButtonPosition(ImageButton button, int index) {
-            float horizontalOffsetToCenter = (buttonContainerSize.getWidth() / 2f + buttonSize / 2f) - buttonSize;
-            float verticalEdgeOffset = buttonContainerSize.getHeight() / 2f - buttonSize * 0.5f;
-            this.button = button;
-            if (index == 0)
-                position = new CoordinateF(-horizontalOffsetToCenter, -verticalEdgeOffset);
-            else if (index == 1)
-                position = new CoordinateF(-(buttonContainerSize.getWidth() - buttonSize), 0);
-            else
-                position = new CoordinateF(-horizontalOffsetToCenter, verticalEdgeOffset);
+        ButtonPosition(int id) {
+            this.button = overlayView.findViewById(id);
         }
-    }
-    private View overlayView;
-    private WindowManager windowManager;
-    private ImageButton toggleModeButton, stopButton, listButton;
-    private EnableButton enableButton;
+
+         public void setPosition(int translationX, int translationY) {
+             this.position = new CoordinateF(translationX, translationY);
+         }
+     }
+    private final View overlayView;
+    private final Context context;
+    private final WindowManager windowManager;
+    private final EnableButton enableButton;
     public int landscapeNavigationBarOffset = 0;
 
-    private CustomOverlayView rootOverlay;
-    private WindowManager.LayoutParams params;
+    private final CustomOverlayView rootOverlay;
+    private final WindowManager.LayoutParams params;
     private Size buttonContainerSize;
-    private ViewGroup buttonContainer;
+    private final ViewGroup buttonContainer;
     private ButtonPosition[] buttonPositions;
     private static final int duration = 150;
-    private int buttonSize;
 
     public WidgetController(Context context, WindowManager windowManager, WindowManager.LayoutParams params, View overlayView) {
         this.overlayView = overlayView;
         this.windowManager = windowManager;
         this.params = params;
-        buttonSize = context.getResources().getDimensionPixelSize(R.dimen.button_size);
+        this.context = context;
         enableButton = overlayView.findViewById(R.id.toggleCollapse);
-        toggleModeButton = overlayView.findViewById(R.id.toggle);
         buttonContainer = overlayView.findViewById(R.id.buttonContainer);
         rootOverlay = overlayView.findViewById(R.id.rootOverlay);
-        stopButton = overlayView.findViewById(R.id.stop);
-        listButton = overlayView.findViewById(R.id.list);
     }
 
     public void prepareInitialState() {
@@ -88,48 +83,42 @@ public class WidgetController {
         enableButton.setImageResource(R.drawable.copy);
         enableButton.setBackgroundResource(R.drawable.green_circle);
 
-        ViewGroup buttonContainer = overlayView.findViewById(R.id.buttonContainer);
-        FrameLayout.LayoutParams buttonContainerParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
-        buttonContainerSize = new Size(buttonContainerParams.width, buttonContainerParams.height);
-
+        Resources resources = context.getResources();
         buttonPositions = new ButtonPosition[] {
-                new ButtonPosition(listButton, 0),
-                new ButtonPosition(toggleModeButton, 1),
-                new ButtonPosition(stopButton, 2),
+                new ButtonPosition(R.id.list),
+                new ButtonPosition(R.id.toggle),
+                new ButtonPosition(R.id.eraser),
+                new ButtonPosition(R.id.stop),
         };
-        for (ButtonPosition buttonPosition: buttonPositions) {
-            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) buttonPosition.button.getLayoutParams();
 
-            params.gravity = Gravity.END | Gravity.CENTER_VERTICAL;
+        int startAngle = 15;
+        int sweepAngle = (180 - (startAngle * 2));
+        int unitAngle = sweepAngle / (buttonPositions.length - 1);
+
+        int radius = resources.getDimensionPixelSize(R.dimen.button_size) + resources.getDimensionPixelSize(R.dimen.space_between_buttons);
+        for (int index = 0; index < buttonPositions.length; index++) {
+            ButtonPosition buttonPosition = buttonPositions[index];
+            int currentAngle = startAngle + (index * unitAngle);
+            buttonPosition.setPosition(
+                    (int) -(Math.sin(Math.toRadians(currentAngle)) * radius),
+                    (int) -(Math.cos(Math.toRadians(currentAngle)) * radius)
+            );
+
             buttonPosition.button.setVisibility(View.GONE);
-            buttonPosition.button.setLayoutParams(params);
         }
+        buttonContainerSize = new Size(
+                (int) (resources.getDimensionPixelSize(R.dimen.button_size) - buttonPositions[1].position.x),
+                (int) (resources.getDimensionPixelSize(R.dimen.button_size)
+                                        -buttonPositions[0].position.y
+                                + buttonPositions[buttonPositions.length - 1].position.y)
+        );
+        overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
 
-        buttonContainerParams.width = FrameLayout.LayoutParams.WRAP_CONTENT;
-        buttonContainerParams.height = FrameLayout.LayoutParams.WRAP_CONTENT;
-        buttonContainer.setLayoutParams(buttonContainerParams);
         enableButton.switchToMovableState();
     }
 
-    AnimatorSet playButtonTranslation(boolean isOpening) {
-        ObjectAnimator[] animators = new ObjectAnimator[buttonPositions.length * 2];
-        for (int i = 0; i < buttonPositions.length; i++) {
-            ButtonPosition buttonPosition = buttonPositions[i];
-            ObjectAnimator translationX = ObjectAnimator.ofFloat(buttonPosition.button, "translationX", (isOpening ? 1 : 0) * buttonPosition.position.x);
-            translationX.setDuration(duration);
-            animators[i * 2] = translationX;
-            ObjectAnimator translationY = ObjectAnimator.ofFloat(buttonPosition.button, "translationY",(isOpening ? 1 : 0) * buttonPosition.position.y);
-            translationY.setDuration(duration);
-            animators[i * 2 + 1] = translationY;
-        }
-
-        AnimatorSet animatorSet = new AnimatorSet();
-        animatorSet.playTogether(animators);
-        return animatorSet;
-    }
-
     @RequiresApi(api = Build.VERSION_CODES.R)
-    public void determineOverlayExpandedDimension(FrameLayout.LayoutParams buttonContainerParams, boolean isExpanded, boolean didOrientationChanged) {
+    public void configureOverlayDimensions(FrameLayout.LayoutParams buttonContainerParams, boolean isExpanded, boolean didOrientationChanged) {
         int orientation = overlayView.getContext().getResources().getConfiguration().orientation;
         Insets navigationBarInsets = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
         if (isExpanded) {
@@ -181,7 +170,7 @@ public class WidgetController {
 
     public void open() {
         enableButton.setImageResource(R.drawable.collapse);
-        enableButton.setBackgroundResource(R.drawable.primary_color_circle);
+        enableButton.setBackgroundResource(R.drawable.yellow_color_circle);
         for(ButtonPosition buttonPosition: buttonPositions)
             buttonPosition.button.setVisibility(View.VISIBLE);
         enableButton.switchToStationaryState();
@@ -194,7 +183,7 @@ public class WidgetController {
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
         FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-            determineOverlayExpandedDimension(buttonContainerLayoutParams, true, false);
+            configureOverlayDimensions(buttonContainerLayoutParams, true, false);
         else {
             params.height = WindowManager.LayoutParams.MATCH_PARENT;
             params.width = WindowManager.LayoutParams.MATCH_PARENT;
@@ -203,17 +192,30 @@ public class WidgetController {
         buttonContainerLayoutParams.height = buttonContainerSize.getHeight();
         buttonContainerLayoutParams.width = buttonContainerSize.getWidth();
         buttonContainer.setLayoutParams(buttonContainerLayoutParams);
-        playButtonTranslation(true).start();
+        ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(duration);
+        animator.addUpdateListener(valueAnimator -> {
+            double fraction = valueAnimator.getAnimatedFraction();
+            for (int i = 0; i < buttonPositions.length; i++) {
+                buttonPositions[i].button.setTranslationX((float) (buttonPositions[i].position.x * fraction));
+                buttonPositions[i].button.setTranslationY((float) (buttonPositions[i].position.y * fraction));
+            }
+        });
+        animator.setDuration(duration);
+        animator.start();
     }
 
     public void close() {
         rootOverlay.disableTouchListener();
         enableButton.switchToMovableState();
         FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) overlayView.findViewById(R.id.buttonContainer).getLayoutParams();
-        AnimatorSet animatorSet = playButtonTranslation(false);
-        animatorSet.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
+        ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(duration);
+        animator.addUpdateListener(valueAnimator -> {
+            double fraction = 1 - valueAnimator.getAnimatedFraction();
+            for (int i = 0; i < buttonPositions.length; i++) {
+                buttonPositions[i].button.setTranslationX((float) (buttonPositions[i].position.x * fraction));
+                buttonPositions[i].button.setTranslationY((float) (buttonPositions[i].position.y * fraction));
+            }
+            if (fraction == 0) {
                 enableButton.setImageResource(R.drawable.copy);
                 enableButton.setBackgroundResource(R.drawable.green_circle);
                 for(ButtonPosition buttonPosition: buttonPositions)
@@ -236,6 +238,6 @@ public class WidgetController {
                 windowManager.updateViewLayout(overlayView, params);
             }
         });
-        animatorSet.start();
+        animator.start();
     }
 }

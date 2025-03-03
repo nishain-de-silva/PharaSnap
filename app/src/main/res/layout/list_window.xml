@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="end"
         android:background="@drawable/button_background_red"
-        android:text="clear all"
+        android:text="Clear All"
         android:layout_marginBottom="12dp"
         />
     <ListView
@@ -19,7 +19,7 @@
         android:layout_width="match_parent"
         android:dividerHeight="12dp"
         android:divider="@android:color/transparent"
-        android:layout_height="match_parent">
+        android:layout_height="200dp">
     </ListView>
     <LinearLayout
         android:id="@+id/list_empty"
@@ -35,6 +35,7 @@
             />
         <androidx.appcompat.widget.AppCompatTextView
             android:layout_width="wrap_content"
+            android:background="@color/primaryLight"
             android:layout_height="wrap_content"
             android:textColor="@android:color/black"
             android:textAlignment="center"

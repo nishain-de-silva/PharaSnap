@@ -5,6 +5,7 @@
     android:layout_height="match_parent"
     android:background="@android:color/white"
     android:paddingTop="45dp"
+    android:paddingHorizontal="25dp"
     tools:context=".activities.MainActivity">
     <LinearLayout
         android:layout_width="match_parent"
@@ -12,15 +13,15 @@
         android:layout_gravity="top"
         android:orientation="vertical"
         android:gravity="start"
-        android:layout_margin="25dp">
+        android:paddingVertical="25dp">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="15dp"
+            android:layout_marginBottom="20dp"
             android:text="@string/app_name"
             android:layout_gravity="center"
             android:textColor="@color/darkPurple"
-            android:textSize="25sp"/>
+            android:textSize="30sp"/>
         <Button
             android:id="@+id/launch_widget"
             android:layout_width="wrap_content"
@@ -46,13 +47,38 @@
             android:textColor="@color/darkPurple"
             />
         </LinearLayout>
-        <TextView
-            android:id="@+id/version_label"
-            android:layout_width="wrap_content"
+    <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="@color/darkPurple"
-            android:layout_gravity="center_horizontal|bottom"
-            android:text="Version x.x (code)\nDeveloped by Alchemedy"
-            android:layout_margin="12dp" />
+            android:orientation="vertical"
+            android:layout_gravity="bottom">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/darkPurple"
+                android:textSize="15sp"
+                android:text="@string/developer_note"
+                android:layout_marginBottom="12dp"
+                />
+            <Button
+                android:id="@+id/rate_app"
+                android:layout_width="wrap_content"
+                style="@style/Theme.PharaSnap.TransparentButton"
+                android:layout_gravity="end"
+                android:layout_height="wrap_content"
+                android:text="Rate App"
+                android:textSize="18sp"
+                android:textColor="@color/darkPurple"
+                android:layout_marginBottom="12dp"
+                />
+            <TextView
+                android:id="@+id/version_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="@color/darkPurple"
+                android:text="Version x.x\nDeveloped by Alchemedy"
+                android:layout_margin="12dp" />
+        </LinearLayout>
 </FrameLayout>

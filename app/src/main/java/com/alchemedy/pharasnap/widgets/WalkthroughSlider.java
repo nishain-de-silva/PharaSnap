@@ -20,7 +20,7 @@ public class WalkthroughSlider extends LinearLayout {
     private ArrayList<PageContent> list = new ArrayList<>();
 
     public static abstract class EventHandler {
-        public abstract boolean onResume(int id);
+        public abstract Boolean onResume(int id);
         public abstract boolean onButtonPress(int id);
         public abstract void onComplete();
     }
@@ -55,7 +55,7 @@ public class WalkthroughSlider extends LinearLayout {
     }
 
     private String getDefaultButtonText() {
-        return  currentIndex == (list.size() - 1) ? "Finish" : "Next";
+        return  currentIndex == (list.size() - 1) ? (list.size() == 1 ? "Continue" : "Finish") : "Next";
     }
     private void loadPage(boolean animateForwardDirection, boolean isPageReload) {
         int initialWidth = getWidth();
@@ -65,7 +65,10 @@ public class WalkthroughSlider extends LinearLayout {
         ((TextView) inflatedPage.findViewById(R.id.page_content)).setText(page.contentId);
         inflatedPage.findViewById(R.id.task_complete_indicator).setVisibility(GONE);
         TextView paginationIndicator = inflatedPage.findViewById(R.id.pagination_indicator);
-        paginationIndicator.setText(String.format("%d / %d", currentIndex + 1, list.size()));
+        if (list.size() > 1)
+            paginationIndicator.setText(String.format("%d / %d", currentIndex + 1, list.size()));
+        else
+            paginationIndicator.setVisibility(GONE);
         Button previousButton = inflatedPage.findViewById(R.id.page_previous);
         if (currentIndex > 0 && list.get(currentIndex - 1).canRevisit) {
             previousButton.setOnClickListener(v -> {
@@ -154,7 +157,9 @@ public class WalkthroughSlider extends LinearLayout {
                 && currentIndex > -1
                 && currentIndex < list.size()
         ) {
-            if (eventHandler.onResume(list.get(currentIndex).contentId))
+            Boolean canResume = eventHandler.onResume(list.get(currentIndex).contentId);
+            if (canResume == null) return;
+            if (canResume)
                 indicateTaskCompleted("Completed");
             else
                 loadPage(true, true);

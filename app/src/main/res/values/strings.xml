@@ -19,7 +19,8 @@
     <string name="control_use_tutorial">When capturing text there are two modes,
         \n1) Normal mode where you simply tap on text element on screen to capture.
         \n\n2) Image mode uses text recognition OCR (for now only support latin characters) to capture text on images.
-        \nWhen switching to Image mode the app request screen capture in order to visually see the image on the screen. Screen capturing would automatically turn off after few seconds if you leave Image mode
+        \nWhen switching to Image mode the app request screen capture in order to visually see the image on the screen. Screen capturing would automatically turn off in 10 seconds after you leave Image mode
         \n\nYou can toggle between the two modes on left-most button on the widget.</string>
-    <string name="control_use_tutorial_extended">Once you tap on the text on screen (not drag and select) it would get highlighted and copied to clipboard. You can optionally change the text selection which copied.\nYou can also view your last copied items in the recent list from the floating widget itself.</string>
+    <string name="control_use_tutorial_extended">Once you tap on the text on screen (not drag and select) it would get highlighted and you can select multiple selections at once. You can optionally change the text selection which copied.\nYou can also view your last copied items in the recent list from the floating widget itself.</string>
+    <string name="developer_note">This is an app developed by single person. If love this app useful I would like to hear your feedback and thoughts.</string>
 </resources>

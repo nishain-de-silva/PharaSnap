@@ -19,6 +19,8 @@ import androidx.annotation.Nullable;
 import com.alchemedy.pharasnap.helper.OnTapListener;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 
+import java.util.ArrayList;
+
 public class CustomOverlayView extends FrameLayout {
 
     private Paint paint;
@@ -30,6 +32,8 @@ public class CustomOverlayView extends FrameLayout {
 
     private OnTapListener onTapListener;
     private OnDismissListener onDismissListener;
+    RectF boundingBox = null;
+    ArrayList<RectF> selections = null;
 
     public static abstract class OnDismissListener {
         protected abstract void onDismiss();
@@ -57,7 +61,7 @@ public class CustomOverlayView extends FrameLayout {
         super(context, attrs, defStyleAttr, defStyleRes);
         initPaint();
     }
-    RectF boundingBox = null;
+
 
     private void initPaint() {
         paint = new Paint();
@@ -120,7 +124,8 @@ public class CustomOverlayView extends FrameLayout {
         });
     }
 
-    public void showBoundingBox(Rect boundingBox) {
+    public void addNewBoundingBox(Rect boundingBox) {
+        if (selections == null) selections = new ArrayList<>();
         int[] offset = new int[2];
         getLocationOnScreen(offset);
         boundingBox.offset(-offset[0], -offset[1]);
@@ -131,7 +136,7 @@ public class CustomOverlayView extends FrameLayout {
         valueAnimator.setDuration(200);
         int width = boundingBox.width();
         int height = boundingBox.height();
-        this.boundingBox = animatingBoundingBox;
+        selections.add(animatingBoundingBox);
         valueAnimator.addUpdateListener(animation -> {
             float fraction = animation.getAnimatedFraction();
             animatingBoundingBox.set(
@@ -144,28 +149,43 @@ public class CustomOverlayView extends FrameLayout {
         });
         valueAnimator.start();
     }
-    public void hideBoundingBox() {
-        if (boundingBox == null) return;
-        boundingBox = null;
+    public void clearAllSelections() {
+        if (selections == null) return;
+        selections = null;
         invalidate();
+    }
+
+    public int removeSelection(float tappedX, float tappedY) {
+        if (selections == null) return -1;
+        int i = 0;
+        int[] offset = new int[2];
+        getLocationOnScreen(offset);
+        float relativeX = tappedX - offset[0];
+        float relativeY = tappedY - offset[0];
+        for (RectF boundingBox: selections) {
+            if (boundingBox.contains(relativeX, relativeY)) {
+                selections.remove(i);
+                invalidate();
+                return i;
+            }
+            i++;
+        }
+        return -1;
     }
 
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
-        if (boundingBox != null) {
-            paint.setColor(highlightFillColor);
-            paint.setStyle(Paint.Style.FILL);
-            canvas.drawRoundRect(boundingBox, 10, 10, paint);
-            paint.setStrokeWidth(PRIMARY_STROKE_WIDTH);
-            paint.setColor(highlightStrokeColor);
-            paint.setStyle(Paint.Style.STROKE);
-            canvas.drawRoundRect(boundingBox, 10, 10, paint);
-        }
-        if (debugDot != null) {
-            paint.setColor(Color.RED);
-            paint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(debugDot.x, debugDot.y, 15, paint);
+        if (selections != null) {
+            for (RectF boundingBox: selections) {
+                paint.setColor(highlightFillColor);
+                paint.setStyle(Paint.Style.FILL);
+                canvas.drawRoundRect(boundingBox, 10, 10, paint);
+                paint.setStrokeWidth(PRIMARY_STROKE_WIDTH);
+                paint.setColor(highlightStrokeColor);
+                paint.setStyle(Paint.Style.STROKE);
+                canvas.drawRoundRect(boundingBox, 10, 10, paint);
+            }
         }
     }
 }

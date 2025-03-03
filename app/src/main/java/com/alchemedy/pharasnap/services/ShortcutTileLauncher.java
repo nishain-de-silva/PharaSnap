@@ -2,17 +2,20 @@ package com.alchemedy.pharasnap.services;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresApi;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.alchemedy.pharasnap.activities.NoDisplayHelperActivity;
 import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.utils.AccessibilityHandler;
 
+@RequiresApi(api = Build.VERSION_CODES.N)
 public class ShortcutTileLauncher extends TileService {
     @Override
     public void onTileAdded() {

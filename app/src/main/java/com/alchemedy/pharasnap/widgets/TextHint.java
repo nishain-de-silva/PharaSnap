@@ -35,10 +35,6 @@ public class TextHint extends androidx.appcompat.widget.AppCompatTextView {
         if (visibility != View.VISIBLE)
             setVisibility(View.VISIBLE);
         setText(text);
-        if (onTapListener != null) {
-            setOnClickListener(null);
-            onTapListener = null;
-        }
     }
 
     @Override
@@ -59,7 +55,6 @@ public class TextHint extends androidx.appcompat.widget.AppCompatTextView {
     public void onTextCaptured(OnTapListener onTapListener) {
         if (visibility != View.VISIBLE)
             setVisibility(View.VISIBLE);
-        setText("Text copied to clipboard. Tap to edit selection");
         this.onTapListener = onTapListener;
         setOnClickListener(v -> onTapListener.onTap());
     }

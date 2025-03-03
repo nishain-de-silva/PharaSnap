@@ -23,33 +23,29 @@ import android.hardware.display.VirtualDisplay;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
-import android.media.projection.MediaProjectionConfig;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Parcel;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.view.WindowInsets;
-import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.mlkit.vision.common.InputImage;
@@ -77,6 +73,7 @@ import org.json.JSONException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+
 public class NodeExplorerAccessibilityService extends android.accessibilityservice.AccessibilityService {
     private WindowManager windowManager;
     private View overlayView;
@@ -96,6 +93,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     private TextHint textHint;
     private VirtualDisplay mediaProjectionDisplay;
     private boolean isAccessibilityServiceBusy;
+    private ArrayList<String> collectedTexts = null;
 
     private CustomOverlayView rootOverlay;
 
@@ -119,27 +117,22 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     private void showResult(Rect bound, String text) {
-        TextHint label = overlayView.findViewById(R.id.text_hint);
-
         if (text.isEmpty()) {
-            rootOverlay.hideBoundingBox();
-            label.changeText(getString(R.string.text_detection_failed));
+            textHint.changeText(getString(R.string.text_detection_failed));
             return;
         }
-        rootOverlay.showBoundingBox(bound);
-
-        label.onTextCaptured(new TextHint.OnTapListener() {
-            @Override
-            public void onTap() {
-                setupEditSelectionModal(text, true);
-            }
-        });
-        copyTextToClipboard(text);
-        saveTextToSharedPreferences(text);
+        collectedTexts.add(text);
+        View copyIndicator = overlayView.findViewById(R.id.text_copy_indicator);
+        if (copyIndicator.getVisibility() != View.VISIBLE)
+            copyIndicator.setVisibility(View.VISIBLE);
+        rootOverlay.addNewBoundingBox(bound);
+        textHint.changeText("Text block added. Tap here to edit selection. Tap on selection block again to remove");
     }
 
-    void saveTextToSharedPreferences(String text) {
+    void saveTextToStorageIfNeeded(@Nullable String textToStore) {
+        if (collectedTexts.size() == 0) return;
         ArrayList<String> entries = new ArrayList<>();
+        String text = textToStore == null ? String.join("\n", collectedTexts) : textToStore;
         try {
             JSONArray inputJSONArray = new JSONArray(sharedPreferences.getString(Constants.ENTRIES_KEY, "[]"));
             for (int i = 0; i < inputJSONArray.length(); i++) {
@@ -154,13 +147,14 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(Constants.ENTRIES_KEY, new JSONArray(entries).toString());
         editor.apply();
+        copyTextToClipboard(text);
     }
 
     void copyTextToClipboard(String text) {
         clipboardManager.setPrimaryClip(ClipData.newPlainText("copied text", text));
     }
 
-    void setupEditSelectionModal(String text, boolean shouldSaveCopiedText) {
+    void setupEditSelectionModal(String text, boolean isDraftText) {
         modal.showModal(Modal.ModalType.EDIT_SELECTION, new Modal.ModalCallback() {
             SelectionEditorTextView selectedText;
 
@@ -174,7 +168,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
             @Override
             public void onHeaderBackPressed(ViewGroup modalWindow) {
-                if (shouldSaveCopiedText)
+                if (isDraftText)
                     super.onHeaderBackPressed(modalWindow);
                 else
                     showEntryList();
@@ -189,7 +183,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 });
                 inflatedView.findViewById(R.id.action_copy_selected_text).setOnClickListener(v -> {
                     String text = selectedText.getSelectedText();
-                    copyTextAndDismiss(text);
+                    copyTextAndDismiss(text, isDraftText);
                 });
             }
         });
@@ -215,15 +209,23 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
+
                 EntryListAdapter adapter = new EntryListAdapter(NodeExplorerAccessibilityService.this, items, new EntryListAdapter.OnTapListener() {
                     @Override
-                    public void onTap(String text) {
+                    public void onTap(int index, String text) {
                         setupEditSelectionModal(text, false);
                     }
 
                     @Override
-                    public void onTapCopyToClipboardShortcut(String text) {
-                        copyTextAndDismiss(text);
+                    public void onTapCopyToClipboardShortcut(int index, String text) {
+                        copyTextAndDismiss(text, false);
+                    }
+
+                    @Override
+                    public void onDelete(int index) {
+                        items.remove(index);
+                        sharedPreferences.edit().putString(Constants.ENTRIES_KEY, new JSONArray(items).toString())
+                                .apply();
                     }
                 });
                 inflatedView.findViewById(R.id.list_clear).setOnClickListener(v -> {
@@ -239,8 +241,14 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         });
     }
 
-    void copyTextAndDismiss(String text) {
-        copyTextToClipboard(text);
+    void copyTextAndDismiss(String text, boolean shouldStoreText) {
+        if (shouldStoreText)
+            saveTextToStorageIfNeeded(text);
+        else {
+            copyTextToClipboard(text);
+            // collectedTexts should be size 0 to prevent storing the text
+            collectedTexts.clear();
+        }
         toggleExpandWidget();
     }
 
@@ -253,7 +261,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 mediaProjection.stop();
             };
             mediaProjectionIdleHandler = new Handler();
-            mediaProjectionIdleHandler.postDelayed(mediaProjectionIdlePostRunnable, 1000 * 5);
+            mediaProjectionIdleHandler.postDelayed(mediaProjectionIdlePostRunnable, 1000 * 10);
         }
     }
     private void toggleTextRecognitionMode(boolean skipCountdownTermination) {
@@ -261,7 +269,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         if (isTextRecognitionEnabled) {
             if (!skipCountdownTermination)
                 startCountdownToTerminateMediaProjection();
-        } else {
+        } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             if (imageReader == null) {
                 requestMediaProjection();
             } else {
@@ -272,17 +280,14 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 }
             }
         }
-        rootOverlay.hideBoundingBox();
         isTextRecognitionEnabled = !isTextRecognitionEnabled;
-        TextHint textHint = overlayView.findViewById(R.id.text_hint);
         textHint.changeMode(isTextRecognitionEnabled);
     }
 
     private void toggleExpandWidget() {
-        TextHint textHint = overlayView.findViewById(R.id.text_hint);
         if (isWidgetExpanded) {
             modal.closeModal();
-            rootOverlay.hideBoundingBox();
+            clearAllSelections(true);
             widgetController.close();
             if (isTextRecognitionEnabled)
                 startCountdownToTerminateMediaProjection();
@@ -320,6 +325,14 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         isWidgetExpanded = !isWidgetExpanded;
     }
 
+    private void clearAllSelections(boolean shouldStoreLastText) {
+        rootOverlay.clearAllSelections();
+        if (shouldStoreLastText)
+            saveTextToStorageIfNeeded(null);
+        collectedTexts.clear();
+        overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
+    }
+
     private boolean showFloatingWidget(boolean shouldExpand) {
         if (overlayView != null) {
             Toast.makeText(this, "Widget is already launched", Toast.LENGTH_SHORT).show();
@@ -334,6 +347,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         modal = new Modal(overlayView);
 
         currentOrientation = getResources().getConfiguration().orientation;
+        collectedTexts = new ArrayList<>();
         // Initial WindowManager params (clicks pass through the overlay)
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -357,7 +371,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
                 int privateFlagsValue = privateFlags.getInt(params);
                 int noAnimFlag = noAnim.getInt(params);
-
                 privateFlagsValue |= noAnimFlag;
                 privateFlags.setInt(params, privateFlagsValue);
             } catch (IllegalAccessException | NoSuchFieldException e) {
@@ -391,8 +404,21 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         toggleModeButton = overlayView.findViewById(R.id.toggle);
         ImageButton listButton = overlayView.findViewById(R.id.list);
         ImageButton stopButton = overlayView.findViewById(R.id.stop);
+        ImageButton eraserButton = overlayView.findViewById(R.id.eraser);
+        eraserButton.setOnClickListener(v -> {
+            if (collectedTexts.size() == 0)
+                textHint.changeText("No text selections to clear");
+            clearAllSelections(false);
+        });
         textHint = overlayView.findViewById(R.id.text_hint);
-
+        textHint.onTextCaptured(new TextHint.OnTapListener() {
+            @Override
+            public void onTap() {
+                if (collectedTexts.size() == 0) return;
+                String collectiveText = String.join("\n", collectedTexts);
+                setupEditSelectionModal(collectiveText, true);
+            }
+        });
 
         toggleModeButton.setOnClickListener(v -> toggleTextRecognitionMode(false));
         stopButton.setOnClickListener(v -> onStopWidget());
@@ -410,6 +436,13 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                     textHint.changeText("Sorry, we are still busy looking for text element you tapped previously");
                     return;
                 }
+                int removedIndex = rootOverlay.removeSelection(tappedCoordinate.x, tappedCoordinate.y);
+                if (removedIndex != -1) {
+                    collectedTexts.remove(removedIndex);
+                    if (collectedTexts.size() == 0)
+                        overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
+                    return;
+                }
                 overlayView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
                     @Override
                     public void onLayoutChange(View view, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
@@ -423,11 +456,9 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                                 windowManager.updateViewLayout(overlayView, params);
 
                                 if (isTextRecognitionEnabled) {
-                                    rootOverlay.hideBoundingBox();
-                                    processScreenshot(result.bound, (int) tappedCoordinate.x, (int) tappedCoordinate.y);
-                                    return;
-                                }
-                                showResult(result.bound, result.text);
+                                    captureScreenshot(result.bound, (int) tappedCoordinate.x, (int) tappedCoordinate.y);
+                                } else
+                                    showResult(result.bound, result.text);
                             }
                         });
                     }
@@ -443,7 +474,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                     toggleExpandWidget();
                 else {
                     textHint.changeText(getString(R.string.text_hint_close_overlay));
-                    rootOverlay.hideBoundingBox();
                 }
             }
         });
@@ -466,9 +496,10 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        if (rootOverlay != null && newConfig.orientation != currentOrientation) {
+        if (overlayView != null && newConfig.orientation != currentOrientation) {
             currentOrientation = newConfig.orientation;
-            rootOverlay.hideBoundingBox();
+            if (isWidgetExpanded)
+                clearAllSelections(false);
             if (mediaProjectionDisplay != null) {
                 ScreenInfo screenInfo = getScreenConfiguration();
                 mediaProjectionDisplay.resize(screenInfo.width, screenInfo.height, screenInfo.densityDpi);
@@ -481,7 +512,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 FrameLayout.LayoutParams buttonContainerParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
-                widgetController.determineOverlayExpandedDimension(buttonContainerParams, isWidgetExpanded, true);
+                widgetController.configureOverlayDimensions(buttonContainerParams, isWidgetExpanded, true);
             } else {
                 if(isWidgetExpanded)
                     buttonContainer.setTranslationX(0);
@@ -500,62 +531,87 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         overlayView.findViewById(R.id.loading).setVisibility(isProcessing ? View.VISIBLE : View.GONE);
     }
 
-    void processScreenshot(Rect bounds, int tappedCoordinateX, int tappedCoordinateY) {
-        overlayView.findViewById(R.id.buttonContainer).setVisibility(View.GONE);
-        TextHint textHint = overlayView.findViewById(R.id.text_hint);
+    void processScreenshot(Rect bounds, int tappedCoordinateX, int tappedCoordinateY, Bitmap screenBitmap) {
+        TextRecognizer recognizer =
+                TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        bounds.bottom = Math.min(bounds.bottom, screenBitmap.getHeight());
+        bounds.top = Math.max(bounds.top, 0);
+
+        Bitmap croppedImage = Bitmap.createBitmap(screenBitmap, bounds.left, bounds.top, bounds.width(), bounds.height());
+        setIsProcessing(true);
+//            debugImage.setImageBitmap(croppedImage);
+        recognizer.process(
+                        InputImage.fromBitmap(croppedImage, 0)
+                )
+                .addOnSuccessListener(result -> {
+                    List<Text.TextBlock> textBlocks = result.getTextBlocks();
+                    Rect textBoundingBox = null;
+                    String tappedText = result.getText();
+                    List<Pair<Rect, String>> candidates = new ArrayList<>();
+                    for (Text.TextBlock block: textBlocks) {
+                        Rect trialBoundingBox = block.getBoundingBox();
+                        if (trialBoundingBox != null && trialBoundingBox.contains(tappedCoordinateX - bounds.left, tappedCoordinateY - bounds.top)) {
+                            trialBoundingBox.offset(bounds.left, bounds.top);
+                            candidates.add(new Pair<>(trialBoundingBox, block.getText()));
+                        }
+                    }
+
+                    int minArea = Integer.MAX_VALUE;
+                    for (Pair<Rect, String> value: candidates) {
+                        int area = value.first.width() * value.first.height();
+                        if (area < minArea) {
+                            minArea = area;
+                            textBoundingBox = value.first;
+                            tappedText = value.second;
+                        }
+                    }
+                    if (textBoundingBox != null) {
+                        showResult(textBoundingBox, tappedText);
+                    } else
+                        showResult(bounds, tappedText);
+                }).addOnCompleteListener(tsk -> setIsProcessing(false));
+    }
+
+    void changeOverlayContentVisibility(boolean isVisible) {
+        overlayView.findViewById(R.id.buttonContainer).setVisibility(isVisible ? View.VISIBLE : View.GONE);
+        textHint.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+    }
+    void captureScreenshot(Rect bounds, int tappedCoordinateX, int tappedCoordinateY) {
+        changeOverlayContentVisibility(false);
 //        ImageView debugImage = overlayView.findViewById(R.id.debug_image);
-        textHint.setVisibility(View.GONE);
 //        debugImage.setVisibility(View.GONE);
         new Handler().postDelayed(() -> {
-            Image image = imageReader.acquireLatestImage();
-            overlayView.findViewById(R.id.buttonContainer).setVisibility(View.VISIBLE);
-            textHint.setVisibility(View.VISIBLE);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                takeScreenshot(Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
+                    @Override
+                    public void onSuccess(@NonNull ScreenshotResult screenshotResult) {
+                        changeOverlayContentVisibility(true);
+                        processScreenshot(
+                                bounds,
+                                tappedCoordinateX,
+                                tappedCoordinateY,
+                                Bitmap.wrapHardwareBuffer(screenshotResult.getHardwareBuffer(), screenshotResult.getColorSpace())
+                        );
+                    }
+
+                    @Override
+                    public void onFailure(int i) {
+                        changeOverlayContentVisibility(true);
+                    }
+                });
+            } else {
+                Image image = imageReader.acquireLatestImage();
+                changeOverlayContentVisibility(true);
 //            debugImage.setVisibility(View.VISIBLE);
-            Image.Plane plane = image.getPlanes()[0];
+                Image.Plane plane = image.getPlanes()[0];
 
-            Bitmap screenBitmap = Bitmap.createBitmap(plane.getRowStride() / plane.getPixelStride(),
-                    image.getHeight(), Bitmap.Config.ARGB_8888);
-            screenBitmap.copyPixelsFromBuffer(plane.getBuffer());
-            image.close();
-
-            TextRecognizer recognizer =
-                    TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
-            bounds.bottom = Math.min(bounds.bottom, screenBitmap.getHeight());
-            bounds.top = Math.max(bounds.top, 0);
-
-            Bitmap croppedImage = Bitmap.createBitmap(screenBitmap, bounds.left, bounds.top, bounds.width(), bounds.height());
-            setIsProcessing(true);
-//            debugImage.setImageBitmap(croppedImage);
-            recognizer.process(
-                            InputImage.fromBitmap(croppedImage, 0)
-                    )
-                    .addOnSuccessListener(result -> {
-                        List<Text.TextBlock> textBlocks = result.getTextBlocks();
-                        Rect textBoundingBox = null;
-                        String tappedText = result.getText();
-                        List<Pair<Rect, String>> candidates = new ArrayList<>();
-                        for (Text.TextBlock block: textBlocks) {
-                            Rect trialBoundingBox = block.getBoundingBox();
-                            if (trialBoundingBox != null && trialBoundingBox.contains(tappedCoordinateX - bounds.left, tappedCoordinateY - bounds.top)) {
-                                trialBoundingBox.offset(bounds.left, bounds.top);
-                                candidates.add(new Pair<>(trialBoundingBox, block.getText()));
-                            }
-                        }
-
-                        int minArea = Integer.MAX_VALUE;
-                        for (Pair<Rect, String> value: candidates) {
-                            int area = value.first.width() * value.first.height();
-                            if (area < minArea) {
-                                minArea = area;
-                                textBoundingBox = value.first;
-                                tappedText = value.second;
-                            }
-                        }
-                        if (textBoundingBox != null) {
-                            showResult(textBoundingBox, tappedText);
-                        } else
-                            showResult(bounds, tappedText);
-                    }).addOnCompleteListener(tsk -> setIsProcessing(false));
+                Bitmap screenBitmap = Bitmap.createBitmap(plane.getRowStride() / plane.getPixelStride(),
+                        image.getHeight(), Bitmap.Config.ARGB_8888);
+                screenBitmap.copyPixelsFromBuffer(plane.getBuffer());
+                image.close();
+                processScreenshot(bounds, tappedCoordinateX, tappedCoordinateY, screenBitmap);
+            }
         }, 100);
     }
 
@@ -586,12 +642,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         mediaProjectionManager =
                 (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
 
-        Intent screenCaptureIntent;
-        if (android.os.Build.VERSION.SDK_INT >= 34) {
-            screenCaptureIntent = mediaProjectionManager.createScreenCaptureIntent(MediaProjectionConfig.createConfigForDefaultDisplay());
-        } else {
-            screenCaptureIntent = mediaProjectionManager.createScreenCaptureIntent();
-        }
+        Intent screenCaptureIntent = mediaProjectionManager.createScreenCaptureIntent();;
         Intent activityIntent = new Intent(this, MediaProjectionRequestActivity.class);
         activityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         activityIntent.putExtra("screenCaptureIntent", screenCaptureIntent);
@@ -650,7 +701,9 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     private void notifyStateOnQuickTile(boolean newState) {
-        if (newState != sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
+        if (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
+                newState != sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
             ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
     }
 
@@ -707,10 +760,15 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
         windowManager.removeView(overlayView);
         overlayView = null;
+        rootOverlay = null;
+        toggleModeButton = null;
+        textHint = null;
         modal = null;
         widgetController = null;
-        clipboardManager = null;
         windowManager = null;
+        saveTextToStorageIfNeeded(null);
+        clipboardManager = null;
+        collectedTexts = null;
 
         if (mediaProjectionIdleHandler != null) {
             mediaProjectionIdleHandler.removeCallbacks(mediaProjectionIdlePostRunnable);
@@ -761,9 +819,8 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         // when this service is created at phone-reboot or re-created by system my memory cleanup
         // it will check the current stale active state and turn it off.
         sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
-        if (sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
             ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
-
         tileMessageReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {

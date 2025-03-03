@@ -1,12 +1,13 @@
 package com.alchemedy.pharasnap.activities;
 
-import android.app.StatusBarManager;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
@@ -33,28 +34,30 @@ public class MainActivity extends AppCompatActivity {
 
     private void addTutorials(boolean isTutorialRestart) {
         pages.add(0, new WalkthroughSlider.PageContent(R.string.introduction, "Introduction"));
-        WalkthroughSlider.PageContent secondPage = new WalkthroughSlider.PageContent(R.string.add_tile_description, "Notification Shortcut");
-        if (!isTutorialRestart) {
-            secondPage
-                    .setButtonText("Skip", true)
-                    .onCreate(new WalkthroughSlider.PageContent.CreateCallback() {
-                        @Override
-                        protected void onCreate() {
-                            tileAddedSignalBroadcastListener = new BroadcastReceiver() {
-                                @Override
-                                public void onReceive(Context context, Intent intent) {
-                                    LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(this);
-                                    tileAddedSignalBroadcastListener = null;
-                                    walkthroughSlider.indicateTaskCompleted("Well done on adding the shortcut!");
-                                }
-                            };
-                            LocalBroadcastManager.getInstance(MainActivity.this)
-                                    .registerReceiver(tileAddedSignalBroadcastListener, new IntentFilter(Constants.TILE_ADDED_WHILE_TUTORIAL));
-                        }
-                    });
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            WalkthroughSlider.PageContent secondPage = new WalkthroughSlider.PageContent(R.string.add_tile_description, "Notification Shortcut");
+            if (!isTutorialRestart) {
+                secondPage
+                        .setButtonText("Skip", true)
+                        .onCreate(new WalkthroughSlider.PageContent.CreateCallback() {
+                            @Override
+                            protected void onCreate() {
+                                tileAddedSignalBroadcastListener = new BroadcastReceiver() {
+                                    @Override
+                                    public void onReceive(Context context, Intent intent) {
+                                        LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(this);
+                                        tileAddedSignalBroadcastListener = null;
+                                        walkthroughSlider.indicateTaskCompleted("Well done on adding the shortcut!");
+                                    }
+                                };
+                                LocalBroadcastManager.getInstance(MainActivity.this)
+                                        .registerReceiver(tileAddedSignalBroadcastListener, new IntentFilter(Constants.TILE_ADDED_WHILE_TUTORIAL));
+                            }
+                        });
+            }
 
-        pages.add(secondPage);
+            pages.add(secondPage);
+        }
         pages.add(new WalkthroughSlider.PageContent(
                 R.string.control_use_tutorial,
                 "Capture Modes"
@@ -67,15 +70,16 @@ public class MainActivity extends AppCompatActivity {
         walkthroughSlider = findViewById(R.id.walkthrough_slider);
         walkthroughSlider.start(pages, new WalkthroughSlider.EventHandler() {
             @Override
-            public boolean onResume(int id) {
+            public Boolean onResume(int id) {
                 if (id == R.string.accessibility_requirement_description)
                     return AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this);
-                if (id == R.string.overlay_requirement_description)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && id == R.string.overlay_requirement_description)
                     return Settings.canDrawOverlays(MainActivity.this);
 
-                return false;
+                return null;
             }
 
+            @SuppressLint("InlinedApi")
             @Override
             public boolean onButtonPress(int id) {
                 if (id == R.string.accessibility_requirement_description) {
@@ -112,12 +116,14 @@ public class MainActivity extends AppCompatActivity {
         });
         TextView versionLabel = findViewById(R.id.version_label);
         versionLabel.setText(versionLabel.getText().toString()
-                .replace("code", String.valueOf(BuildConfig.VERSION_CODE))
                 .replace("x.x", BuildConfig.VERSION_NAME)
         );
         findViewById(R.id.restart_tutorial).setOnClickListener(v -> {
             addTutorials(true);
             showWalkthroughSlider();
+        });
+        findViewById(R.id.rate_app).setOnClickListener(v -> {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + getPackageName())));
         });
     }
 
@@ -134,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
                     R.string.accessibility_requirement_description,
                     "Accessibility Required"
             ).setButtonText("Grant Accessibility Permission", false));
-        if (!Settings.canDrawOverlays(this))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this))
             pages.add(new WalkthroughSlider.PageContent(
                     R.string.overlay_requirement_description,
                     "Overlay Permission Required"
