@@ -46,8 +46,10 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
@@ -309,16 +311,12 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             systemNavigationButtonTapListener = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-//                    String reason = intent.getStringExtra("reason");
-//                    if("homekey".equals(reason) || "recentapps".equals(reason)) {
-//
-//                    }
                     if(isWidgetExpanded)
                         toggleExpandWidget();
                 }
             };
             textHint.changeMode(isTextRecognitionEnabled);
-            registerReceiver(systemNavigationButtonTapListener, new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+            ContextCompat.registerReceiver(this, systemNavigationButtonTapListener, new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS), ContextCompat.RECEIVER_NOT_EXPORTED);
             widgetController.open();
         }
 
@@ -368,13 +366,12 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 Class<WindowManager.LayoutParams> layoutParamsClass = WindowManager.LayoutParams.class;
                 Field privateFlags = layoutParamsClass.getField("privateFlags");
                 Field noAnim = layoutParamsClass.getField("PRIVATE_FLAG_NO_MOVE_ANIMATION");
-
                 int privateFlagsValue = privateFlags.getInt(params);
                 int noAnimFlag = noAnim.getInt(params);
                 privateFlagsValue |= noAnimFlag;
                 privateFlags.setInt(params, privateFlagsValue);
-            } catch (IllegalAccessException | NoSuchFieldException e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                FirebaseCrashlytics.getInstance().recordException(e);
             }
         }
 
@@ -642,7 +639,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         mediaProjectionManager =
                 (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
 
-        Intent screenCaptureIntent = mediaProjectionManager.createScreenCaptureIntent();;
+        Intent screenCaptureIntent = mediaProjectionManager.createScreenCaptureIntent();
         Intent activityIntent = new Intent(this, MediaProjectionRequestActivity.class);
         activityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         activityIntent.putExtra("screenCaptureIntent", screenCaptureIntent);
@@ -854,7 +851,5 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {}
 
     @Override
-    public void onInterrupt() {
-        onStopWidget();
-    }
+    public void onInterrupt() {}
 }

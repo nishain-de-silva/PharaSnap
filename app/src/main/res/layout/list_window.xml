@@ -14,6 +14,14 @@
         android:text="Clear All"
         android:layout_marginBottom="12dp"
         />
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:textColor="@color/darkPurple"
+        android:text="Swipe item left or right to remove"
+        android:layout_marginBottom="12dp"
+        />
     <ListView
         android:id="@+id/entry_list"
         android:layout_width="match_parent"

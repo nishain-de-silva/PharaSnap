@@ -57,7 +57,7 @@ public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton
                         onTapListener.onTap(new CoordinateF(x, y));
                     }
                     return true;
-                } else if (action == MotionEvent.ACTION_DOWN){
+                } else if (action == MotionEvent.ACTION_DOWN) {
                     initialY = params.y;
                     initialX = params.x;
                     enableButtonDownCoordinate = new CoordinateF(x, y);

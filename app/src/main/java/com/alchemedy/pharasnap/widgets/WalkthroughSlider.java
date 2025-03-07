@@ -4,6 +4,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -27,11 +28,15 @@ public class WalkthroughSlider extends LinearLayout {
     public static class PageContent {
         public static abstract class CreateCallback {
             protected abstract void onCreate();
+
         }
+
         String buttonTitle, title;
         int contentId;
         boolean canRevisit = true;
+
         CreateCallback createCallback;
+        int graphicsLayoutId = -1;
         public PageContent(int contentId, String title) {
             this.contentId = contentId;
             this.title = title;
@@ -39,6 +44,11 @@ public class WalkthroughSlider extends LinearLayout {
 
         public PageContent onCreate(CreateCallback createCallback) {
             this.createCallback = createCallback;
+            return this;
+        }
+
+        public PageContent onDrawGraphics(int graphicLayoutId) {
+            this.graphicsLayoutId = graphicLayoutId;
             return this;
         }
 
@@ -65,6 +75,11 @@ public class WalkthroughSlider extends LinearLayout {
         ((TextView) inflatedPage.findViewById(R.id.page_content)).setText(page.contentId);
         inflatedPage.findViewById(R.id.task_complete_indicator).setVisibility(GONE);
         TextView paginationIndicator = inflatedPage.findViewById(R.id.pagination_indicator);
+        ViewGroup visualContainer = inflatedPage.findViewById(R.id.page_visual_content);
+        if (page.graphicsLayoutId != -1) {
+            visualContainer.addView(LayoutInflater.from(getContext()).inflate(page.graphicsLayoutId, null));
+        } else
+            visualContainer.setVisibility(GONE);
         if (list.size() > 1)
             paginationIndicator.setText(String.format("%d / %d", currentIndex + 1, list.size()));
         else

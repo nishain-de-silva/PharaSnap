@@ -59,10 +59,12 @@ public class MainActivity extends AppCompatActivity {
             pages.add(secondPage);
         }
         pages.add(new WalkthroughSlider.PageContent(
-                R.string.control_use_tutorial,
+                R.string.capturing_modes_tutorial,
                 "Capture Modes"
-        ));
-        pages.add(new WalkthroughSlider.PageContent(R.string.control_use_tutorial_extended, "Final bit"));
+        ).onDrawGraphics(R.layout.tutorial_graphic_controls));
+        pages.add(new WalkthroughSlider.PageContent(R.string.text_copy_tutorial, "Copy Text selection")
+                .onDrawGraphics(R.layout.tutorial_graphic_text_selection));
+        pages.add(new WalkthroughSlider.PageContent(R.string.recent_items_tutorial, "Recent Items"));
     }
 
     private void showWalkthroughSlider() {
