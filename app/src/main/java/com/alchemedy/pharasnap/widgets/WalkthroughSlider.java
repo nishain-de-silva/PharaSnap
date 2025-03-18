@@ -4,7 +4,6 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -26,24 +25,25 @@ public class WalkthroughSlider extends LinearLayout {
         public abstract void onComplete();
     }
     public static class PageContent {
-        public static abstract class CreateCallback {
-            protected abstract void onCreate();
-
+        public static abstract class AttachedStateListener {
+            protected abstract void onAttach();
+            protected abstract void onDetach();
         }
 
         String buttonTitle, title;
         int contentId;
         boolean canRevisit = true;
+        boolean isPageSkippable = false;
 
-        CreateCallback createCallback;
+        AttachedStateListener attachedStateListener;
         int graphicsLayoutId = -1;
         public PageContent(int contentId, String title) {
             this.contentId = contentId;
             this.title = title;
         }
 
-        public PageContent onCreate(CreateCallback createCallback) {
-            this.createCallback = createCallback;
+        public PageContent onAttachStateChanged(AttachedStateListener attachedStateListener) {
+            this.attachedStateListener = attachedStateListener;
             return this;
         }
 
@@ -57,6 +57,11 @@ public class WalkthroughSlider extends LinearLayout {
             buttonTitle = title;
             return this;
         }
+
+        public PageContent addSkipButton() {
+            isPageSkippable = true;
+            return this;
+        }
     }
 
     EventHandler eventHandler;
@@ -67,7 +72,7 @@ public class WalkthroughSlider extends LinearLayout {
     private String getDefaultButtonText() {
         return  currentIndex == (list.size() - 1) ? (list.size() == 1 ? "Continue" : "Finish") : "Next";
     }
-    private void loadPage(boolean animateForwardDirection, boolean isPageReload) {
+    private void loadPage(boolean animateForwardDirection, boolean isAnimating) {
         int initialWidth = getWidth();
         removeAllViews();
         PageContent page = list.get(currentIndex);
@@ -85,9 +90,11 @@ public class WalkthroughSlider extends LinearLayout {
         else
             paginationIndicator.setVisibility(GONE);
         Button previousButton = inflatedPage.findViewById(R.id.page_previous);
-        if (currentIndex > 0 && list.get(currentIndex - 1).canRevisit) {
+        if (page.isPageSkippable || (currentIndex > 0 && list.get(currentIndex - 1).canRevisit)) {
+            if (page.isPageSkippable)
+                previousButton.setText("Skip");
             previousButton.setOnClickListener(v -> {
-                changePage(false);
+                changePage(page.isPageSkippable, true);
             });
         } else
             previousButton.setVisibility(GONE);
@@ -98,15 +105,16 @@ public class WalkthroughSlider extends LinearLayout {
         );
         actionButton.setOnClickListener(v -> {
             if (!eventHandler.onButtonPress(page.contentId))
-                changePage(true);
+                changePage(true, true);
         });
         addView(inflatedPage, new ViewGroup.LayoutParams(
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
         ));
-        if (!isPageReload) {
-            if (page.createCallback != null)
-                page.createCallback.onCreate();
+        if (page.attachedStateListener != null)
+            page.attachedStateListener.onAttach();
+
+        if (isAnimating) {
             if (currentIndex > 0 || !animateForwardDirection) {
                 ValueAnimator entryAnimator = ValueAnimator.ofFloat(0, 1);
                 entryAnimator.addUpdateListener(valueAnimator -> {
@@ -120,20 +128,26 @@ public class WalkthroughSlider extends LinearLayout {
         }
     }
 
-    public void changePage(boolean isForwardDirection) {
+    public void changePage(boolean isForwardDirection, boolean animating) {
+        PageContent currentPage = list.get(currentIndex);
+        if (currentPage.attachedStateListener != null)
+            currentPage.attachedStateListener.onDetach();
         currentIndex += isForwardDirection ? 1 : -1;
         if (isForwardDirection && currentIndex == list.size()) {
             eventHandler.onComplete();
             return;
         }
-
+        if (!animating) {
+            loadPage(isForwardDirection, false);
+            return;
+        }
         ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
         animator.addUpdateListener(valueAnimator -> {
             float frameFraction = valueAnimator.getAnimatedFraction();
             setTranslationX(frameFraction * (isForwardDirection ? -1 : 1) * getWidth());
             setAlpha(1 - frameFraction);
             if (frameFraction == 1) {
-                loadPage(isForwardDirection, false);
+                loadPage(isForwardDirection, true);
             }
         });
         animator.setDuration(350);
@@ -163,7 +177,7 @@ public class WalkthroughSlider extends LinearLayout {
         indicator.setText(indicatorText);
         actionButton.setText(getDefaultButtonText());
         actionButton.setOnClickListener(v -> {
-            changePage(true);
+            changePage(true, true);
         });
     }
 
@@ -174,10 +188,9 @@ public class WalkthroughSlider extends LinearLayout {
         ) {
             Boolean canResume = eventHandler.onResume(list.get(currentIndex).contentId);
             if (canResume == null) return;
-            if (canResume)
-                indicateTaskCompleted("Completed");
-            else
-                loadPage(true, true);
+            if (canResume) {
+                changePage(true, false);
+            }
         }
 
     }

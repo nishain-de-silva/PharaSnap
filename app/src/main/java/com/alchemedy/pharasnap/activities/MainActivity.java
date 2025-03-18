@@ -6,10 +6,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -39,9 +41,10 @@ public class MainActivity extends AppCompatActivity {
             if (!isTutorialRestart) {
                 secondPage
                         .setButtonText("Skip", true)
-                        .onCreate(new WalkthroughSlider.PageContent.CreateCallback() {
+                        .onAttachStateChanged(new WalkthroughSlider.PageContent.AttachedStateListener() {
                             @Override
-                            protected void onCreate() {
+                            protected void onAttach() {
+                                Log.d("info", "the slide was attached");
                                 tileAddedSignalBroadcastListener = new BroadcastReceiver() {
                                     @Override
                                     public void onReceive(Context context, Intent intent) {
@@ -52,6 +55,16 @@ public class MainActivity extends AppCompatActivity {
                                 };
                                 LocalBroadcastManager.getInstance(MainActivity.this)
                                         .registerReceiver(tileAddedSignalBroadcastListener, new IntentFilter(Constants.TILE_ADDED_WHILE_TUTORIAL));
+                            }
+
+                            @Override
+                            protected void onDetach() {
+                                if (tileAddedSignalBroadcastListener != null) {
+                                    Log.d("info", "the slide was detached");
+                                    LocalBroadcastManager.getInstance(MainActivity.this)
+                                            .unregisterReceiver(tileAddedSignalBroadcastListener);
+                                    tileAddedSignalBroadcastListener = null;
+                                }
                             }
                         });
             }
@@ -64,7 +77,10 @@ public class MainActivity extends AppCompatActivity {
         ).onDrawGraphics(R.layout.tutorial_graphic_controls));
         pages.add(new WalkthroughSlider.PageContent(R.string.text_copy_tutorial, "Copy Text selection")
                 .onDrawGraphics(R.layout.tutorial_graphic_text_selection));
-        pages.add(new WalkthroughSlider.PageContent(R.string.recent_items_tutorial, "Recent Items"));
+        pages.add(
+                new WalkthroughSlider.PageContent(R.string.recent_items_tutorial, "Recent Items")
+                        .onDrawGraphics(R.layout.tutorial_graphic_recent_items)
+        );
     }
 
     private void showWalkthroughSlider() {
@@ -73,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
         walkthroughSlider.start(pages, new WalkthroughSlider.EventHandler() {
             @Override
             public Boolean onResume(int id) {
-                if (id == R.string.accessibility_requirement_description)
+                if (id == R.string.accessibility_requirement_description || id == R.string.accessibility_requirement_description_first_time)
                     return AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && id == R.string.overlay_requirement_description)
                     return Settings.canDrawOverlays(MainActivity.this);
@@ -84,17 +100,13 @@ public class MainActivity extends AppCompatActivity {
             @SuppressLint("InlinedApi")
             @Override
             public boolean onButtonPress(int id) {
-                if (id == R.string.accessibility_requirement_description) {
+                if (id == R.string.accessibility_requirement_description || id == R.string.accessibility_requirement_description_first_time) {
                     startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
                     return true;
                 }
                 if (id == R.string.overlay_requirement_description) {
                     startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION));
                     return true;
-                }
-                if (id == R.string.add_tile_description && tileAddedSignalBroadcastListener != null) {
-                    LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(tileAddedSignalBroadcastListener);
-                    tileAddedSignalBroadcastListener = null;
                 }
                 return false;
             }
@@ -114,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
         View launchButton = findViewById(R.id.launch_widget);
 
         launchButton.setOnClickListener(v -> {
-            WidgetController.launchWidget(this);
+            WidgetController.launchWidget(this, true);
         });
         TextView versionLabel = findViewById(R.id.version_label);
         versionLabel.setText(versionLabel.getText().toString()
@@ -139,9 +151,10 @@ public class MainActivity extends AppCompatActivity {
 
         if(!AccessibilityHandler.isAccessibilityServiceEnabled(this))
             pages.add(new WalkthroughSlider.PageContent(
-                    R.string.accessibility_requirement_description,
-                    "Accessibility Required"
-            ).setButtonText("Grant Accessibility Permission", false));
+                    needToDisplayInitialWalkthrough ? R.string.accessibility_requirement_description_first_time : R.string.accessibility_requirement_description,
+                    needToDisplayInitialWalkthrough ? "Accessibility Service Required" : "Enable Accessibility Service"
+            )
+                    .setButtonText(needToDisplayInitialWalkthrough ? "Grant Accessibility Access" : "Enable Accessibility", false));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this))
             pages.add(new WalkthroughSlider.PageContent(
                     R.string.overlay_requirement_description,
@@ -156,6 +169,20 @@ public class MainActivity extends AppCompatActivity {
             showWalkthroughSlider();
         else
             showMainMenu();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            getWindow().setNavigationBarColor(Color.WHITE);
+        } else
+            getWindow().setNavigationBarColor(getResources().getColor(R.color.darkPurple));
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            getWindow().setStatusBarColor(Color.WHITE);
+            getWindow().getDecorView().setSystemUiVisibility(
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0) |
+                        View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            );
+        } else
+            getWindow().setStatusBarColor(getResources().getColor(R.color.darkPurple));
     }
 
     @Override

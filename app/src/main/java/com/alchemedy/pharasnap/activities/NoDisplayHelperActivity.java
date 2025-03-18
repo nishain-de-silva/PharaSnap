@@ -1,5 +1,6 @@
 package com.alchemedy.pharasnap.activities;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -18,7 +19,7 @@ public class NoDisplayHelperActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (!getIntent().getBooleanExtra(Constants.IGNORE_SERVICE_LAUNCH, false)) {
-            WidgetController.launchWidget(this);
+            WidgetController.launchWidget(this, false);
         }
         finish();
     }

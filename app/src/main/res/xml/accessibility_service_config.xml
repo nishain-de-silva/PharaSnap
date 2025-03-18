@@ -2,10 +2,10 @@
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:description="@string/accessibility_service_description"
-    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFeedbackType="feedbackVisual"
     android:canRetrieveWindowContent="true"
     android:summary="read text on the screen"
-    android:accessibilityFlags="flagIncludeNotImportantViews"
+    android:accessibilityFlags="flagIncludeNotImportantViews|flagRetrieveInteractiveWindows"
     android:canTakeScreenshot="true"
     android:notificationTimeout="100"
     tools:targetApi="r" />

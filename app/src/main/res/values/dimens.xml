@@ -1,4 +1,5 @@
 <resources>
+    <dimen name="modal_top_margin">120dp</dimen>
     <dimen name="modal_min_height">400dp</dimen>
     <dimen name="space_between_buttons">15dp</dimen>
     <dimen name="button_size">40dp</dimen>

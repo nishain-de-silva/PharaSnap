@@ -2,6 +2,7 @@ package com.alchemedy.pharasnap.widgets;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -16,6 +17,7 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.OnTapListener;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 
@@ -32,7 +34,6 @@ public class CustomOverlayView extends FrameLayout {
 
     private OnTapListener onTapListener;
     private OnDismissListener onDismissListener;
-    RectF boundingBox = null;
     ArrayList<RectF> selections = null;
 
     public static abstract class OnDismissListener {

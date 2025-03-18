@@ -6,6 +6,7 @@ import android.os.Build;
 import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
@@ -26,6 +27,7 @@ public class ShortcutTileLauncher extends TileService {
         updateTileStatusInStorage(false);
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
         if(!sharedPreferences.getBoolean(Constants.IS_TUTORIAL_SHOWN, false)) {
+            Log.d("info", "broadcast has sent to tutorial");
             LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(Constants.TILE_ADDED_WHILE_TUTORIAL));
         }
     }
@@ -92,10 +94,10 @@ public class ShortcutTileLauncher extends TileService {
                         .putExtra(Constants.IGNORE_SERVICE_LAUNCH, true)
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } else {
+                Toast.makeText(this, "Please enable the accessibility service", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivityAndCollapse(intent);
-                Toast.makeText(this, "Please turn on accessibility", Toast.LENGTH_SHORT).show();
             }
         }
     }

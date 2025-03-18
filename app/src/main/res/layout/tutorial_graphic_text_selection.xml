@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:orientation="vertical"
     xmlns:android="http://schemas.android.com/apk/res/android">
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
     <androidx.appcompat.widget.AppCompatTextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -31,4 +35,23 @@
         android:layout_gravity="end"
         android:background="@drawable/black_color_circle"
         />
-</FrameLayout>
+    </FrameLayout>
+    <LinearLayout
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="12dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical">
+        <androidx.appcompat.widget.AppCompatTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="To clear all Text Selections:"
+            android:textColor="@android:color/black"
+            android:layout_marginEnd="12dp"/>
+        <ImageButton
+            android:layout_width="@dimen/button_size"
+            android:layout_height="@dimen/button_size"
+            android:background="@drawable/yellow_color_circle"
+            android:src="@drawable/eraser" />
+    </LinearLayout>
+</LinearLayout>

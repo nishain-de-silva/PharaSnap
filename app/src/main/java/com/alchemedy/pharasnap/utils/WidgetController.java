@@ -1,13 +1,9 @@
 package com.alchemedy.pharasnap.utils;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Insets;
 import android.os.Build;
@@ -22,8 +18,9 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.alchemedy.pharasnap.R;
@@ -33,16 +30,30 @@ import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 
 public class WidgetController {
-    public static void launchWidget(Context context) {
+
+    public static void launchWidget(Context context, boolean showAccessibilityPrompt) {
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
             Toast.makeText(context, "Please provide overlay permission", Toast.LENGTH_SHORT).show();
             context.startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION));
         } else if (!AccessibilityHandler.isAccessibilityServiceEnabled(context)) {
-            Toast.makeText(context, "Please enable the accessibility service", Toast.LENGTH_SHORT).show();
-            context.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-        }  else
+            if (showAccessibilityPrompt)
+                new AlertDialog.Builder(context)
+                        .setTitle("Grant Accessibility Access")
+                                .setMessage(R.string.accessibility_enable_alert_description)
+                        .setPositiveButton("Grant Access", (dialogInterface, i) -> {
+                            context.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                            dialogInterface.dismiss();
+                        })
+                        .setNegativeButton("Cancel", (dialogInterface, i) -> dialogInterface.dismiss())
+                        .show();
+            else {
+                Toast.makeText(context, "Please enable the accessibility service", Toast.LENGTH_SHORT).show();
+                context.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+            }
+        }  else {
             LocalBroadcastManager.getInstance(context)
                     .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE));
+        }
     }
      class ButtonPosition {
         ImageButton button;
@@ -108,8 +119,7 @@ public class WidgetController {
         }
         buttonContainerSize = new Size(
                 (int) (resources.getDimensionPixelSize(R.dimen.button_size) - buttonPositions[1].position.x),
-                (int) (resources.getDimensionPixelSize(R.dimen.button_size)
-                                        -buttonPositions[0].position.y
+                (int) (resources.getDimensionPixelSize(R.dimen.button_size) - buttonPositions[0].position.y
                                 + buttonPositions[buttonPositions.length - 1].position.y)
         );
         overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
@@ -119,24 +129,21 @@ public class WidgetController {
 
     @RequiresApi(api = Build.VERSION_CODES.R)
     public void configureOverlayDimensions(FrameLayout.LayoutParams buttonContainerParams, boolean isExpanded, boolean didOrientationChanged) {
-        int orientation = overlayView.getContext().getResources().getConfiguration().orientation;
         Insets navigationBarInsets = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
+        boolean isNavigationBarPlacedOnVerticalEdge = navigationBarInsets.bottom > 0;
         if (isExpanded) {
-            if (orientation == Configuration.ORIENTATION_PORTRAIT) {
-                int navigationBarSize = Math.max(navigationBarInsets.top, navigationBarInsets.bottom);
+            if (isNavigationBarPlacedOnVerticalEdge) {
+                int navigationBarSize = navigationBarInsets.bottom;
                 params.height = windowManager.getCurrentWindowMetrics().getBounds().height() - navigationBarSize;
-                if (navigationBarInsets.top > navigationBarInsets.bottom)
-                    buttonContainerParams.bottomMargin = navigationBarSize / 2;
-                else
-                    buttonContainerParams.topMargin = navigationBarSize / 2;
+                buttonContainerParams.topMargin = navigationBarSize / 2;
                 params.width = WindowManager.LayoutParams.MATCH_PARENT;
                 if (didOrientationChanged) {
                     buttonContainer.setTranslationY(0);
                     buttonContainer.setTranslationX(0);
-                    landscapeNavigationBarOffset = 0;
                 }
+                landscapeNavigationBarOffset = 0;
             } else {
-                int navigationBarSize = Math.max(navigationBarInsets.left, navigationBarInsets.right);
+                int navigationBarSize = navigationBarInsets.left + navigationBarInsets.right;
                 params.width = windowManager.getCurrentWindowMetrics().getBounds().width() - navigationBarSize;
                 params.height = WindowManager.LayoutParams.MATCH_PARENT;
                 buttonContainerParams.topMargin = 0;
@@ -144,24 +151,23 @@ public class WidgetController {
                 if (didOrientationChanged) {
                     buttonContainer.setTranslationX(0);
                     buttonContainer.setTranslationY(0);
-                    landscapeNavigationBarOffset = navigationBarSize;
                 }
+                landscapeNavigationBarOffset = navigationBarInsets.right > 0 ? navigationBarSize : 0;
             }
             if (didOrientationChanged)
                 buttonContainer.setLayoutParams(buttonContainerParams);
         } else if (didOrientationChanged) {
-            if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+            if (isNavigationBarPlacedOnVerticalEdge || navigationBarInsets.right == 0) {
                 params.x = 0;
                 landscapeNavigationBarOffset = 0;
             } else {
-                int navigationBarSize = Math.max(navigationBarInsets.left, navigationBarInsets.right);
-                params.x = navigationBarSize;
-                landscapeNavigationBarOffset = navigationBarSize;
+                params.x = navigationBarInsets.right;
+                landscapeNavigationBarOffset = navigationBarInsets.right;
             }
             params.y = 0;
         }
         if (isExpanded) {
-            params.gravity = Gravity.START | Gravity.TOP;
+            params.gravity = (navigationBarInsets.left > 0 ? Gravity.END : Gravity.START) | Gravity.TOP;
         }
         if (didOrientationChanged) {
             windowManager.updateViewLayout(overlayView, params);
@@ -175,19 +181,24 @@ public class WidgetController {
             buttonPosition.button.setVisibility(View.VISIBLE);
         enableButton.switchToStationaryState();
         rootOverlay.enableTouchListener();
+
+        FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
+
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+//            configureOverlayDimensions(buttonContainerLayoutParams, true, false);
+//        else {
+//            params.gravity = Gravity.START | Gravity.TOP;
+//            params.height = WindowManager.LayoutParams.MATCH_PARENT;
+//            params.width = WindowManager.LayoutParams.MATCH_PARENT;
+//        }
+        params.gravity = Gravity.START | Gravity.TOP;
+        params.height = WindowManager.LayoutParams.MATCH_PARENT;
+        params.width = WindowManager.LayoutParams.MATCH_PARENT;
+        params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
         buttonContainer.setTranslationY(params.y);
         buttonContainer.setTranslationX(-params.x + landscapeNavigationBarOffset);
         params.y = 0;
         params.x = 0;
-        params.gravity = Gravity.START | Gravity.TOP;
-        params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
-        FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-            configureOverlayDimensions(buttonContainerLayoutParams, true, false);
-        else {
-            params.height = WindowManager.LayoutParams.MATCH_PARENT;
-            params.width = WindowManager.LayoutParams.MATCH_PARENT;
-        }
         windowManager.updateViewLayout(overlayView, params);
         buttonContainerLayoutParams.height = buttonContainerSize.getHeight();
         buttonContainerLayoutParams.width = buttonContainerSize.getWidth();
@@ -226,6 +237,17 @@ public class WidgetController {
                     buttonContainerLayoutParams.topMargin = 0;
                     buttonContainerLayoutParams.bottomMargin = 0;
                 }
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    // onConfiguration() will NOT be called if screen is flipped while in same orientation.
+                    // this create incorrect landscape offset in when navigation bar position flip side between left and right.
+                    Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
+                    if (landscapeNavigationBarOffset > 0 && navigationBarInset.right == 0)
+                        landscapeNavigationBarOffset = 0;
+                    else if (navigationBarInset.right > 0 && landscapeNavigationBarOffset == 0)
+                        landscapeNavigationBarOffset = navigationBarInset.right;
+                }
+
                 params.y = (int) buttonContainer.getTranslationY();
                 params.x = (int) -buttonContainer.getTranslationX() + landscapeNavigationBarOffset;
                 buttonContainer.setTranslationY(0);

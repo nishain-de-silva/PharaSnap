@@ -30,7 +30,8 @@
 <!--        <item name="font">@font/primary</item>-->
         <item name="fontFamily">@font/primary</item>
         <item name="buttonStyle">@style/Theme.PharaSnap.Button</item>
-        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/primaryYellow</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/logo</item>
         <item name="android:fontFamily">@font/primary</item>
 <!--        <item name="colorPrimaryVariant">@color/purple_700</item>-->
 <!--        <item name="colorOnPrimary">@color/white</item>-->

@@ -1,5 +1,6 @@
 package com.alchemedy.pharasnap.services;
 
+import android.animation.LayoutTransition;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.app.Notification;
@@ -39,6 +40,7 @@ import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -49,6 +51,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
@@ -118,9 +121,12 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         }
     }
 
-    private void showResult(Rect bound, String text) {
+    private void showResult(@Nullable Rect bound, String text) {
         if (text.isEmpty()) {
-            textHint.changeText(getString(R.string.text_detection_failed));
+            if (isTextRecognitionEnabled)
+                textHint.changeText(getString(R.string.text_detection_failed));
+            else
+                textHint.changeText(getString(R.string.text_detection_failed_in_text_mode));
             return;
         }
         collectedTexts.add(text);
@@ -132,7 +138,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     void saveTextToStorageIfNeeded(@Nullable String textToStore) {
-        if (collectedTexts.size() == 0) return;
+        if (textToStore == null && collectedTexts.size() == 0) return;
         ArrayList<String> entries = new ArrayList<>();
         String text = textToStore == null ? String.join("\n", collectedTexts) : textToStore;
         try {
@@ -201,32 +207,39 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             @Override
             public void onBeforeModalShown(ViewGroup inflatedView) {
                 String jsonString = sharedPreferences.getString(Constants.ENTRIES_KEY, "[]");
-                ArrayList<String> items = new ArrayList<>();
+                ArrayList<EntryListAdapter.Item> items = new ArrayList<>();
+                if(collectedTexts.size() > 0)
+                    items.add(new EntryListAdapter.Item(String.join("\n", collectedTexts), true));
                 try {
                     JSONArray jsonArray = new JSONArray(jsonString);
                     for (int i = 0; i < jsonArray.length(); i++) {
-                        items.add(jsonArray.getString(i));
+                        items.add(new EntryListAdapter.Item(jsonArray.getString(i), false));
                     }
 
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
-
+                ListView listView = inflatedView.findViewById(R.id.entry_list);
                 EntryListAdapter adapter = new EntryListAdapter(NodeExplorerAccessibilityService.this, items, new EntryListAdapter.OnTapListener() {
                     @Override
-                    public void onTap(int index, String text) {
-                        setupEditSelectionModal(text, false);
+                    public void onTap(int index, EntryListAdapter.Item item) {
+                        setupEditSelectionModal(item.content, item.isDraft);
                     }
 
                     @Override
-                    public void onTapCopyToClipboardShortcut(int index, String text) {
-                        copyTextAndDismiss(text, false);
+                    public void onTapCopyToClipboardShortcut(int index, EntryListAdapter.Item item) {
+                        copyTextAndDismiss(item.content, item.isDraft);
                     }
 
                     @Override
-                    public void onDelete(int index) {
+                    public void onDelete(int index, EntryListAdapter entryListAdapter) {
                         items.remove(index);
-                        sharedPreferences.edit().putString(Constants.ENTRIES_KEY, new JSONArray(items).toString())
+                        JSONArray newArray = new JSONArray();
+                        for(EntryListAdapter.Item i : items) {
+                            if(!i.isDraft)
+                                newArray.put(i.content);
+                        }
+                        sharedPreferences.edit().putString(Constants.ENTRIES_KEY, newArray.toString())
                                 .apply();
                     }
                 });
@@ -234,7 +247,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                     adapter.clear();
                     sharedPreferences.edit().remove(Constants.ENTRIES_KEY).apply();
                 });
-                ListView listView = inflatedView.findViewById(R.id.entry_list);
+
                 listView.setEmptyView(
                         inflatedView.findViewById(R.id.list_empty)
                 );
@@ -246,11 +259,9 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     void copyTextAndDismiss(String text, boolean shouldStoreText) {
         if (shouldStoreText)
             saveTextToStorageIfNeeded(text);
-        else {
+        else
             copyTextToClipboard(text);
-            // collectedTexts should be size 0 to prevent storing the text
-            collectedTexts.clear();
-        }
+        clearAllSelections(false);
         toggleExpandWidget();
     }
 
@@ -263,7 +274,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 mediaProjection.stop();
             };
             mediaProjectionIdleHandler = new Handler();
-            mediaProjectionIdleHandler.postDelayed(mediaProjectionIdlePostRunnable, 1000 * 10);
+            mediaProjectionIdleHandler.postDelayed(mediaProjectionIdlePostRunnable, 1000 * 7);
         }
     }
     private void toggleTextRecognitionMode(boolean skipCountdownTermination) {
@@ -316,7 +327,9 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 }
             };
             textHint.changeMode(isTextRecognitionEnabled);
-            ContextCompat.registerReceiver(this, systemNavigationButtonTapListener, new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS), ContextCompat.RECEIVER_NOT_EXPORTED);
+            IntentFilter intentFilter = new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
+            intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
+            ContextCompat.registerReceiver(this, systemNavigationButtonTapListener, intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
             widgetController.open();
         }
 
@@ -324,6 +337,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     private void clearAllSelections(boolean shouldStoreLastText) {
+        if (collectedTexts.size() == 0) return;
         rootOverlay.clearAllSelections();
         if (shouldStoreLastText)
             saveTextToStorageIfNeeded(null);
@@ -342,7 +356,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
         // Inflate overlay layout
         overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null);
-        modal = new Modal(overlayView);
+        modal = new Modal(overlayView, windowManager);
 
         currentOrientation = getResources().getConfiguration().orientation;
         collectedTexts = new ArrayList<>();
@@ -357,6 +371,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+            params.setFitInsetsTypes(WindowInsets.Type.navigationBars());
         }
 
         if (Build.VERSION.SDK_INT >= 34) {
@@ -384,10 +399,10 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 }, overlayView, windowManager, params);
 
         widgetController = new WidgetController(this, windowManager, params, overlayView);
-        if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
-                widgetController.landscapeNavigationBarOffset = Math.max(navigationBarInset.left, navigationBarInset.right);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
+            if (navigationBarInset.right > 0) {
+                widgetController.landscapeNavigationBarOffset = navigationBarInset.right;
                 params.x = widgetController.landscapeNavigationBarOffset;
             }
         }
@@ -405,7 +420,8 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         eraserButton.setOnClickListener(v -> {
             if (collectedTexts.size() == 0)
                 textHint.changeText("No text selections to clear");
-            clearAllSelections(false);
+            else
+                clearAllSelections(false);
         });
         textHint = overlayView.findViewById(R.id.text_hint);
         textHint.onTextCaptured(new TextHint.OnTapListener() {
@@ -486,7 +502,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                     toggleExpandWidget();
             }
         });
-
         return true;
     }
 
@@ -495,8 +510,10 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         super.onConfigurationChanged(newConfig);
         if (overlayView != null && newConfig.orientation != currentOrientation) {
             currentOrientation = newConfig.orientation;
-            if (isWidgetExpanded)
+            if (isWidgetExpanded) {
                 clearAllSelections(false);
+                modal.reLayout();
+            }
             if (mediaProjectionDisplay != null) {
                 ScreenInfo screenInfo = getScreenConfiguration();
                 mediaProjectionDisplay.resize(screenInfo.width, screenInfo.height, screenInfo.densityDpi);
@@ -570,10 +587,14 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     void changeOverlayContentVisibility(boolean isVisible) {
-        overlayView.findViewById(R.id.buttonContainer).setVisibility(isVisible ? View.VISIBLE : View.GONE);
-        textHint.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+        overlayView.setVisibility(isVisible ? View.VISIBLE : View.INVISIBLE);
     }
-    void captureScreenshot(Rect bounds, int tappedCoordinateX, int tappedCoordinateY) {
+    void captureScreenshot(@Nullable Rect bounds, int tappedCoordinateX, int tappedCoordinateY) {
+        if (bounds == null) {
+            showResult(null, "");
+            return;
+        }
+
         changeOverlayContentVisibility(false);
 //        ImageView debugImage = overlayView.findViewById(R.id.debug_image);
 //        debugImage.setVisibility(View.GONE);
@@ -584,12 +605,16 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                     @Override
                     public void onSuccess(@NonNull ScreenshotResult screenshotResult) {
                         changeOverlayContentVisibility(true);
-                        processScreenshot(
-                                bounds,
-                                tappedCoordinateX,
-                                tappedCoordinateY,
-                                Bitmap.wrapHardwareBuffer(screenshotResult.getHardwareBuffer(), screenshotResult.getColorSpace())
-                        );
+                        Bitmap bitmap = Bitmap.wrapHardwareBuffer(screenshotResult.getHardwareBuffer(), screenshotResult.getColorSpace());
+                        if (bitmap != null)
+                            processScreenshot(
+                                    bounds,
+                                    tappedCoordinateX,
+                                    tappedCoordinateY,
+                                    bitmap
+                            );
+                        else
+                            changeOverlayContentVisibility(true);
                     }
 
                     @Override
@@ -708,10 +733,11 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         if (node == null) return;
         Rect nodeBound = new Rect();
         node.getBoundsInScreen(nodeBound);
-        if (nodeBound.contains(coordinateX, coordinateY)) {
+        if (nodeBound.contains(coordinateX, coordinateY) && node.isVisibleToUser()) {
             int area = nodeBound.height() * nodeBound.width();
-            if ((area < minArea || (area == minArea && !getText(node).isEmpty())) && node.isVisibleToUser()) {
-                selectedNode = node;
+            if (area <= minArea) {
+                if (isTextRecognitionEnabled || !getText(node).isEmpty())
+                    selectedNode = node;
                 minArea = area;
             }
             for (int i = 0; i < node.getChildCount(); i++) {
@@ -785,7 +811,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         public Rect bound;
         public String text;
 
-        NodeResult(Rect bound, String text) {
+        NodeResult(@Nullable Rect bound, String text) {
             this.bound = bound;
             this.text = text;
         }
@@ -801,12 +827,19 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             AccessibilityNodeInfo root = getRootInActiveWindow();
             isInsideElement(root, (int) x, (int) y);
 //            freeSearch(root);
+            if (selectedNode != null)
+                selectedNode.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS);
             String extractedText = !shouldRetrieveText || selectedNode == null ? "" : getText(selectedNode).trim();
             Rect bounds = new Rect();
-            if (selectedNode != null)
+            NodeResult result;
+            if (selectedNode != null) {
                 selectedNode.getBoundsInScreen(bounds);
+                result = new NodeResult(bounds, extractedText);
+            } else {
+                result = new NodeResult(null, "");
+            }
 
-            new Handler(Looper.getMainLooper()).post(() -> resultCallback.onResult(new NodeResult(bounds, extractedText)));
+            new Handler(Looper.getMainLooper()).post(() -> resultCallback.onResult(result));
         }).start();
     }
 

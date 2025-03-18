@@ -2,14 +2,18 @@ package com.alchemedy.pharasnap.utils;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.os.Build;
+import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.TextView;
 
 import com.alchemedy.pharasnap.R;
 
 public class Modal {
+    private final WindowManager windowManager;
     View overlayView;
     private ModalCallback currentModalCallback;
     public abstract static class ModalCallback {
@@ -37,7 +41,8 @@ public class Modal {
         animator.start();
     }
 
-    public Modal(View rootView) {
+    public Modal(View rootView, WindowManager windowManager) {
+        this.windowManager = windowManager;
         overlayView = rootView;
         ViewGroup modalRootWindow = overlayView.findViewById(R.id.modal_window);
         modalRootWindow.setOnClickListener(v -> handleDefaultClose(modalRootWindow));
@@ -54,6 +59,14 @@ public class Modal {
             handleDefaultClose(modalWindow);
     }
 
+    public void reLayout() {
+        int topPadding = overlayView.getContext().getResources().getDimensionPixelSize(R.dimen.modal_top_margin);
+        ViewGroup modalWindow = overlayView.findViewById(R.id.modal_window);
+        if(modalWindow.getVisibility() == View.VISIBLE) {
+            modalWindow.setPadding(0, topPadding, 0, 0);
+        }
+    }
+
     public boolean handleSystemGoBack() {
         ViewGroup modalRootWindow = overlayView.findViewById(R.id.modal_window);
         if(modalRootWindow.getVisibility() == View.VISIBLE) {
@@ -67,6 +80,8 @@ public class Modal {
         currentModalCallback = modalCallback;
         Context context = overlayView.getContext();
         ViewGroup modalRootWindow = overlayView.findViewById(R.id.modal_window);
+        int topPadding = context.getResources().getDimensionPixelSize(R.dimen.modal_top_margin);
+        modalRootWindow.setPadding(0, topPadding, 0, 0);
         ViewGroup content = overlayView.findViewById(R.id.modal_content);
         ((TextView) modalRootWindow.findViewById(R.id.modal_back_title)).setText(
                 modalType == ModalType.EDIT_SELECTION ? R.string.text_selection_modal_title

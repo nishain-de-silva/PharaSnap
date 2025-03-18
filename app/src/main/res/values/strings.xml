@@ -1,25 +1,30 @@
 <resources>
     <string name="app_name">PharaSnap</string>
     <string name="title_activity_main">MainActivity</string>
-    <string name="accessibility_service_description">PharaSnap need access to android accessibility framework to read text on your screen as well as to identify where the text elements are placed on the screen when you tap on them.</string>
+    <string name="accessibility_service_description">PharaSnap need access to android accessibility framework to read text on your screen as well as to identify where the text and image elements are placed on the screen when you tap on them. No personal data is collected and shared to third parties</string>
     <string name="text_hint_default">Text mode. Tap on the text element to capture</string>
     <string name="text_hint_close_overlay">swipe anywhere on screen or tap collapse button to collapse the overlay</string>
     <string name="app_shortcut_short_label">Launch widget</string>
     <string name="app_shortcut_long_label">Launch widget to copy text on screen</string>
     <string name="text_selection_modal_title">Change text selection</string>
     <string name="entry_list_modal_title">Recent items</string>
+    <string name="text_detection_failed_in_text_mode">Could not detect any text. Perhaps try Image mode</string>
+    <string name="accessibility_enable_alert_description">You must provide PharaSnap access to use Accessibility service to read text and image content on the screen. Go setting and select PharaSnap to enable accessibility service</string>
     <string name="text_detection_failed">Could not detect any text</string>
     <string name="list_empty_text">No entries yet! This your last 20 recent item list. When a text is identified it will be shown here</string>
-    <string name="accessibility_requirement_description">Accessibility services helps app read content on the screen in this case accessibility permission is required to read text on screen and on other apps. On the settings, select this app and enable accessibility permission</string>
+    <string name="accessibility_requirement_description">Please enable accessibility service to read and identify the positions of text elements and image elements on the screen to extract their text content. On the settings page, select this app and enable accessibility permission</string>
+    <string name="accessibility_requirement_description_first_time">
+        For PharaSnap to capture and copy text on the screen. It need access to Accessibility service to read text block on screen and as well identify images block are placed on the screen for image-to-text recognition. No personal data is collected and shared to third parties
+    </string>
     <string name="overlay_requirement_description">When using this tool a floating widget displayed over the screen. Please grant permission to draw over other apps. Don\'t worry you can stop the widget when not in use.</string>
     <string name="introduction">PharaSnap can help you copy text on the screen even on places where you don\'t have the facility directly copy text to clipboard. PharaSnap can even capture text on images without ever leaving the app</string>
-    <string name="add_tile_description">To make this tool easily accessible to use add the quick shortcut in your notification panel. Open your notification panel, in the top section (quick settings panel) then tap to customize the panel and add the shortcut tile provided by this app to the active area. Drag and place it on a convenient place
+    <string name="add_tile_description">To make this tool easily accessible to use it is recommended to add the quick settings shortcut in your notification panel. Open your notification panel, in the top section (quick settings panel) then tap to customize the panel and add the shortcut tile provided by this app to the active area. Drag and place it on a convenient place
         \n\nAnother way to open the widget is by long pressing the app launch icon which prompt you open the widget.
     </string>
     <string name="capturing_modes_tutorial">When capturing text there are two modes,
         \n1) Text mode where you simply tap on text element on screen to capture (this could be button, label or multiline paragraph).
-        \n\n2) Image mode uses text recognition OCR (for now only support latin characters) to capture text on images.
-        \nWhen switching to Image mode the app request screen capture in order to visually see the image on the screen. Screen capturing would automatically turn off in 10 seconds after you leave Image mode
+        \n\n2) Image mode uses text recognition OCR (for now only support latin characters including english) to capture text on images.
+        \nWhen switching to Image mode the app request screen capture session in order to visually see the image content on the screen. (Accessibility Service does not project graphical images on the screen for your Android version). Screen capturing would automatically turn off in 7 seconds after you leave Image mode
         \n\nYou can toggle between the two modes on left-most button on the widget.</string>
     <string name="text_copy_tutorial">Once you tap on the text on screen (not drag and select) it would get highlighted and you can select multiple selections at once.
         By default all text from all selected text blocks will be automatically copied to clipboard once you exit or collapse the floating widget. Also you can use text selection editor to only select the required text from the text blocks when you tap on the yellow bar.</string>

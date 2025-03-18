@@ -49,15 +49,17 @@
             android:layout_marginEnd="20dp"
             android:text="Previous" />
         <LinearLayout
-            android:layout_weight="1"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical|end">
+            android:gravity="end|center_vertical"
+            android:layout_gravity="end">
             <TextView
                 android:id="@+id/task_complete_indicator"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Completed!"
+                android:layout_width="0dp"
+                android:text="Well done on adding the shortcut!"
+                android:gravity="end"
+                android:layout_weight="1"
                 android:layout_marginEnd="12dp"
                 android:textColor="#0D203B" />
             <Button

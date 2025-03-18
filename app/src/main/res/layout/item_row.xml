@@ -5,30 +5,16 @@
     android:background="@drawable/text_container_red"
     android:layout_height="wrap_content">
     <FrameLayout
+        android:id="@+id/item_delete_indicator"
         android:layout_width="match_parent"
         android:paddingHorizontal="7dp"
         android:layout_height="match_parent">
         <ImageView
-            android:id="@+id/item_delete1"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_gravity="start|center_vertical"
             android:src="@drawable/delete" />
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/item_undo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingStart="40dp"
-            android:paddingEnd="40dp"
-            android:text="Undo Remove"
-            android:textStyle="bold"
-            android:layout_gravity="center"
-            android:background="@drawable/white_button"
-            android:gravity="center"
-            android:textSize="15sp"
-            android:textColor="@color/primaryRed" />
         <ImageView
-            android:id="@+id/item_delete2"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_gravity="end|center_vertical"
@@ -40,22 +26,35 @@
         android:padding="7dp"
         android:background="@drawable/text_container"
         android:gravity="center_vertical"
-        android:layout_height="match_parent">
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/row_item_content"
-            android:layout_weight="1"
-            android:maxLines="3"
-            android:textColor="@color/black"
+        android:layout_height="wrap_content">
+        <LinearLayout
             android:layout_width="0dp"
-            android:text="sample text"
-            android:layout_height="wrap_content" />
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/item_draft_indicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/primaryRed"
+                android:textStyle="bold"
+                android:text="~Draft (not saved)"/>
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/row_item_content"
+                android:maxLines="3"
+                android:textColor="@android:color/black"
+                android:layout_width="match_parent"
+                android:text="sample text"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
         <ImageButton
             android:id="@+id/row_action_copy_shortcut"
             android:layout_marginStart="12dp"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="@drawable/primary_color_round_rect"
-            android:src="@drawable/copy"
+            android:src="@drawable/copy_white"
             />
     </LinearLayout>
 

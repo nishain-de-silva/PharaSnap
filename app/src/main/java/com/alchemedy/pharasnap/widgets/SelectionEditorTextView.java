@@ -22,7 +22,7 @@ import com.alchemedy.pharasnap.helper.CoordinateF;
 public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompatTextView {
     CursorPoint startCursor, endCursor;
     CoordinateF debugPoint;
-    int primaryColor, transparentPrimaryColor;
+    int cursorColor, selectedTextColor;
     Paint paint = new Paint();
     private Path selectedTextPath;
     private float lineSpacingExtra;
@@ -186,8 +186,8 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
         invalidate();
     }
     void init() {
-        primaryColor = ContextCompat.getColor(getContext(), R.color.primary);
-        transparentPrimaryColor = ContextCompat.getColor(getContext(), R.color.primaryTransparent);
+        cursorColor = ContextCompat.getColor(getContext(), R.color.darkPurple);
+        selectedTextColor = ContextCompat.getColor(getContext(), R.color.textSelection);
     }
 
     public void selectAllText() {
@@ -302,12 +302,12 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
     @Override
     public void draw(@NonNull Canvas canvas) {
         if (selectedTextPath != null) {
-            paint.setColor(transparentPrimaryColor);
+            paint.setColor(selectedTextColor);
             canvas.drawPath(selectedTextPath, paint);
         }
         super.draw(canvas);
         if (startCursor != null && endCursor != null) {
-            paint.setColor(primaryColor);
+            paint.setColor(cursorColor);
 
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(5);

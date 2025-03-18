@@ -17,7 +17,7 @@
                 android:id="@+id/selectedText"
                 android:clickable="true"
                 android:focusable="true"
-                android:textColor="@color/black"
+                android:textColor="@android:color/black"
                 android:layout_width="match_parent"
                 android:lineSpacingExtra="5dp"
                 android:paddingStart="@dimen/thumb_size"
