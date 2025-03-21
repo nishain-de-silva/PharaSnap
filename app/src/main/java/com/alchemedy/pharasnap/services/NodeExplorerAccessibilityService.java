@@ -551,7 +551,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
             @Override
             public void onDragGestureStarted(CoordinateF coordinate) {
-                removeWidgetButtonView = LayoutInflater.from(NodeExplorerAccessibilityService.this).inflate(R.layout.delete_button, null);
                 if (exitAnimator != null) {
                     windowManager.removeView(removeWidgetButtonView);
                     removeWidgetButtonView = null;
@@ -559,6 +558,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                     exitAnimator.cancel();
                     exitAnimator = null;
                 }
+                removeWidgetButtonView = LayoutInflater.from(NodeExplorerAccessibilityService.this).inflate(R.layout.delete_button, null);
                 removeWidgetButtonView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
                     @Override
                     public void onLayoutChange(View view, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
@@ -616,7 +616,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 exitAnimator.setDuration(200)
                         .addUpdateListener(valueAnimator -> {
                             float fraction = valueAnimator.getAnimatedFraction();
-
                             removeWidgetButtonParams.y = (int) ((1 - fraction) * offset);
                             windowManager.updateViewLayout(removeWidgetButtonView, removeWidgetButtonParams);
                             if (shouldStopWidget) {
