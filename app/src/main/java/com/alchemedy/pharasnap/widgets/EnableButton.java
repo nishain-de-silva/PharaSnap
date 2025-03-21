@@ -73,7 +73,7 @@ public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton
                     if(gestureMode == GESTURE_UNDETERMINED && enableButtonDownCoordinate.isCloserTo(x, y, 15)) {
                         onTapListener.onTap(coordinate);
                         gestureMode = GESTURE_TAP;
-                    } else if (gestureMode == GESTURE_DRAG && !isExpanded)
+                    } else if (!isExpanded)
                         onTapListener.onRelease(coordinate);
                     return true;
                 } else if (action == MotionEvent.ACTION_DOWN) {

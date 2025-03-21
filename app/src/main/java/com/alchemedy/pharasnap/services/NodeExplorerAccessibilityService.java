@@ -102,7 +102,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     private int currentOrientation;
     private SharedPreferences sharedPreferences;
 
-    private BroadcastReceiver tileMessageReceiver, configurationChangeReceiver;
+    private BroadcastReceiver startCommandReciever, configurationChangeReceiver;
     private AccessibilityNodeInfo selectedNode;
     private int minArea;
 
@@ -553,6 +553,9 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             public void onDragGestureStarted(CoordinateF coordinate) {
                 removeWidgetButtonView = LayoutInflater.from(NodeExplorerAccessibilityService.this).inflate(R.layout.delete_button, null);
                 if (exitAnimator != null) {
+                    windowManager.removeView(removeWidgetButtonView);
+                    removeWidgetButtonView = null;
+                    deleteButtonBounds = null;
                     exitAnimator.cancel();
                     exitAnimator = null;
                 }
@@ -564,11 +567,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                         entryAnimator = ValueAnimator.ofFloat(0, 1);
                         entryAnimator.setDuration(200);
                         entryAnimator.addUpdateListener(valueAnimator -> {
-                            if (removeWidgetButtonView == null || overlayView == null) {
-                                entryAnimator.cancel();
-                                entryAnimator = null;
-                                return;
-                            }
                             float fraction = valueAnimator.getAnimatedFraction();
                             removeWidgetButtonParams.y = (int) (fraction * offset);
                             windowManager.updateViewLayout(removeWidgetButtonView, removeWidgetButtonParams);
@@ -618,11 +616,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 exitAnimator.setDuration(200)
                         .addUpdateListener(valueAnimator -> {
                             float fraction = valueAnimator.getAnimatedFraction();
-                            if (removeWidgetButtonView == null || overlayView == null) {
-                                exitAnimator.cancel();
-                                exitAnimator = null;
-                                return;
-                            }
 
                             removeWidgetButtonParams.y = (int) ((1 - fraction) * offset);
                             windowManager.updateViewLayout(removeWidgetButtonView, removeWidgetButtonParams);
@@ -762,7 +755,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             );
         }
     }
-    
+
     private void requestMediaProjection() {
         overlayView.setVisibility(View.GONE);
         WindowManager.LayoutParams params = (WindowManager.LayoutParams) overlayView.getLayoutParams();
@@ -892,8 +885,10 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             unregisterReceiver(configurationChangeReceiver);
             configurationChangeReceiver = null;
         }
-        if (removeWidgetButtonView != null)
+        if (removeWidgetButtonView != null) {
             windowManager.removeView(removeWidgetButtonView);
+            removeWidgetButtonView = null;
+        }
         windowManager.removeView(overlayView);
         overlayView = null;
         rootOverlay = null;
@@ -940,8 +935,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             AccessibilityNodeInfo root = getRootInActiveWindow();
             isInsideElement(root, (int) x, (int) y);
 //            freeSearch(root);
-            if (selectedNode != null)
-                selectedNode.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS);
             String extractedText = !shouldRetrieveText || selectedNode == null ? "" : getText(selectedNode).trim();
             Rect bounds = new Rect();
             NodeResult result;
@@ -970,7 +963,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 notifyStateOnQuickTile(true);
         }
 
-        tileMessageReceiver = new BroadcastReceiver() {
+        startCommandReciever = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 boolean shouldSkipNotify = intent.hasExtra(Constants.SKIP_NOTIFY_QUICK_TILE);
@@ -986,14 +979,14 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 }
         };
         LocalBroadcastManager.getInstance(this)
-                .registerReceiver(tileMessageReceiver, new IntentFilter(Constants.ACCESSIBILITY_SERVICE));
+                .registerReceiver(startCommandReciever, new IntentFilter(Constants.ACCESSIBILITY_SERVICE));
     }
 
     @Override
     public void onDestroy() {
-        if (tileMessageReceiver != null) {
-            LocalBroadcastManager.getInstance(this).unregisterReceiver(tileMessageReceiver);
-            tileMessageReceiver = null;
+        if (startCommandReciever != null) {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(startCommandReciever);
+            startCommandReciever = null;
         }
         super.onDestroy();
         onStopWidget();
