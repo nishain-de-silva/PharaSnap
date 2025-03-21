@@ -33,7 +33,6 @@ public class WalkthroughSlider extends LinearLayout {
         String buttonTitle, title;
         int contentId;
         boolean canRevisit = true;
-        boolean isPageSkippable = false;
 
         AttachedStateListener attachedStateListener;
         int graphicsLayoutId = -1;
@@ -55,11 +54,6 @@ public class WalkthroughSlider extends LinearLayout {
         public PageContent setButtonText(String title, boolean canRevisit) {
             this.canRevisit = canRevisit;
             buttonTitle = title;
-            return this;
-        }
-
-        public PageContent addSkipButton() {
-            isPageSkippable = true;
             return this;
         }
     }
@@ -90,11 +84,9 @@ public class WalkthroughSlider extends LinearLayout {
         else
             paginationIndicator.setVisibility(GONE);
         Button previousButton = inflatedPage.findViewById(R.id.page_previous);
-        if (page.isPageSkippable || (currentIndex > 0 && list.get(currentIndex - 1).canRevisit)) {
-            if (page.isPageSkippable)
-                previousButton.setText("Skip");
+        if (currentIndex > 0 && list.get(currentIndex - 1).canRevisit) {
             previousButton.setOnClickListener(v -> {
-                changePage(page.isPageSkippable, true);
+                changePage(false, true);
             });
         } else
             previousButton.setVisibility(GONE);

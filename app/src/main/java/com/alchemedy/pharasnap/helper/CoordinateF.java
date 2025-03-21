@@ -1,5 +1,7 @@
 package com.alchemedy.pharasnap.helper;
 
+import android.graphics.Rect;
+
 public class CoordinateF {
     public float x, y;
     public CoordinateF(float x, float y) {

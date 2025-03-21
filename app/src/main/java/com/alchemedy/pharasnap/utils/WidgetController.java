@@ -2,8 +2,8 @@ package com.alchemedy.pharasnap.utils;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Insets;
 import android.os.Build;
@@ -18,7 +18,6 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -30,12 +29,15 @@ import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 
 public class WidgetController {
-
-    public static void launchWidget(Context context, boolean showAccessibilityPrompt) {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
-            Toast.makeText(context, "Please provide overlay permission", Toast.LENGTH_SHORT).show();
+    public static final int DISABLED_PERMISSION_UNKNOWN = 0, ACCESSIBILITY_DISABLED = 1, OVERLAY_PERMISSION_DISABLED = 2;
+    public static void launchWidget(Context context, boolean showAccessibilityPrompt, int disabledPermissions) {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && (disabledPermissions == OVERLAY_PERMISSION_DISABLED ||
+                disabledPermissions == DISABLED_PERMISSION_UNKNOWN && !Settings.canDrawOverlays(context))) {
+            Toast.makeText(context, "Please grant overlay permission and try again", Toast.LENGTH_SHORT).show();
             context.startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION));
-        } else if (!AccessibilityHandler.isAccessibilityServiceEnabled(context)) {
+        } else if (disabledPermissions == ACCESSIBILITY_DISABLED || !AccessibilityHandler.isAccessibilityServiceEnabled(context)) {
+            SharedPreferences.Editor sharedPreferencesEditor = context.getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, Context.MODE_PRIVATE).edit();
+            sharedPreferencesEditor.putBoolean(Constants.START_WIDGET_AFTER_ACCESSIBILITY_LAUNCH, true).apply();
             if (showAccessibilityPrompt)
                 new AlertDialog.Builder(context)
                         .setTitle("Grant Accessibility Access")
@@ -123,8 +125,6 @@ public class WidgetController {
                                 + buttonPositions[buttonPositions.length - 1].position.y)
         );
         overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
-
-        enableButton.switchToMovableState();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.R)
@@ -149,7 +149,11 @@ public class WidgetController {
                 buttonContainerParams.topMargin = 0;
                 buttonContainerParams.bottomMargin = 0;
                 if (didOrientationChanged) {
-                    buttonContainer.setTranslationX(0);
+                    if (navigationBarInsets.right == 0) {
+                        int insetRight = windowManager.getCurrentWindowMetrics().getWindowInsets().getSystemWindowInsetRight();
+                        buttonContainer.setTranslationX(-insetRight);
+                    } else
+                        buttonContainer.setTranslationX(0);
                     buttonContainer.setTranslationY(0);
                 }
                 landscapeNavigationBarOffset = navigationBarInsets.right > 0 ? navigationBarSize : 0;
@@ -158,7 +162,10 @@ public class WidgetController {
                 buttonContainer.setLayoutParams(buttonContainerParams);
         } else if (didOrientationChanged) {
             if (isNavigationBarPlacedOnVerticalEdge || navigationBarInsets.right == 0) {
-                params.x = 0;
+                if (navigationBarInsets.right == 0) {
+                    params.x = windowManager.getCurrentWindowMetrics().getWindowInsets().getSystemWindowInsetRight();
+                } else
+                    params.x = 0;
                 landscapeNavigationBarOffset = 0;
             } else {
                 params.x = navigationBarInsets.right;
@@ -179,21 +186,19 @@ public class WidgetController {
         enableButton.setBackgroundResource(R.drawable.yellow_color_circle);
         for(ButtonPosition buttonPosition: buttonPositions)
             buttonPosition.button.setVisibility(View.VISIBLE);
-        enableButton.switchToStationaryState();
+        enableButton.isExpanded = true;
         rootOverlay.enableTouchListener();
 
         FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
 
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-//            configureOverlayDimensions(buttonContainerLayoutParams, true, false);
-//        else {
-//            params.gravity = Gravity.START | Gravity.TOP;
-//            params.height = WindowManager.LayoutParams.MATCH_PARENT;
-//            params.width = WindowManager.LayoutParams.MATCH_PARENT;
-//        }
-        params.gravity = Gravity.START | Gravity.TOP;
-        params.height = WindowManager.LayoutParams.MATCH_PARENT;
-        params.width = WindowManager.LayoutParams.MATCH_PARENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+            configureOverlayDimensions(buttonContainerLayoutParams, true, false);
+        else {
+            params.gravity = Gravity.START | Gravity.TOP;
+            params.height = WindowManager.LayoutParams.MATCH_PARENT;
+            params.width = WindowManager.LayoutParams.MATCH_PARENT;
+        }
+
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
         buttonContainer.setTranslationY(params.y);
         buttonContainer.setTranslationX(-params.x + landscapeNavigationBarOffset);
@@ -217,7 +222,7 @@ public class WidgetController {
 
     public void close() {
         rootOverlay.disableTouchListener();
-        enableButton.switchToMovableState();
+        enableButton.isExpanded = false;
         FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) overlayView.findViewById(R.id.buttonContainer).getLayoutParams();
         ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(duration);
         animator.addUpdateListener(valueAnimator -> {
@@ -236,16 +241,6 @@ public class WidgetController {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     buttonContainerLayoutParams.topMargin = 0;
                     buttonContainerLayoutParams.bottomMargin = 0;
-                }
-
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                    // onConfiguration() will NOT be called if screen is flipped while in same orientation.
-                    // this create incorrect landscape offset in when navigation bar position flip side between left and right.
-                    Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
-                    if (landscapeNavigationBarOffset > 0 && navigationBarInset.right == 0)
-                        landscapeNavigationBarOffset = 0;
-                    else if (navigationBarInset.right > 0 && landscapeNavigationBarOffset == 0)
-                        landscapeNavigationBarOffset = navigationBarInset.right;
                 }
 
                 params.y = (int) buttonContainer.getTranslationY();

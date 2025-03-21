@@ -25,7 +25,6 @@ public class MediaProjectionRequestActivity extends AppCompatActivity {
                     if (resultCode == RESULT_OK) {
                         // There are no request codes
                         Intent data = result.getData();
-                        Log.d("debug", "sending back the data");
                         broadcastIntent.putExtra("data", data);
                     }
                     LocalBroadcastManager.getInstance(MediaProjectionRequestActivity.this)

@@ -18,8 +18,13 @@ public class NoDisplayHelperActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (!getIntent().getBooleanExtra(Constants.IGNORE_SERVICE_LAUNCH, false)) {
-            WidgetController.launchWidget(this, false);
+        Intent intent = getIntent();
+        if (!intent.getBooleanExtra(Constants.IGNORE_SERVICE_LAUNCH, false)) {
+            WidgetController.launchWidget(
+                    this,
+                    false,
+                    intent.getIntExtra(Constants.KNOWN_DISABLED_PERMISSIONS_KEY, WidgetController.DISABLED_PERMISSION_UNKNOWN)
+            );
         }
         finish();
     }

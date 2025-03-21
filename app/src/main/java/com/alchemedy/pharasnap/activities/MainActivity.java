@@ -44,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
                         .onAttachStateChanged(new WalkthroughSlider.PageContent.AttachedStateListener() {
                             @Override
                             protected void onAttach() {
-                                Log.d("info", "the slide was attached");
                                 tileAddedSignalBroadcastListener = new BroadcastReceiver() {
                                     @Override
                                     public void onReceive(Context context, Intent intent) {
@@ -60,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             protected void onDetach() {
                                 if (tileAddedSignalBroadcastListener != null) {
-                                    Log.d("info", "the slide was detached");
                                     LocalBroadcastManager.getInstance(MainActivity.this)
                                             .unregisterReceiver(tileAddedSignalBroadcastListener);
                                     tileAddedSignalBroadcastListener = null;
@@ -126,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
         View launchButton = findViewById(R.id.launch_widget);
 
         launchButton.setOnClickListener(v -> {
-            WidgetController.launchWidget(this, true);
+            WidgetController.launchWidget(this, true, WidgetController.DISABLED_PERMISSION_UNKNOWN);
         });
         TextView versionLabel = findViewById(R.id.version_label);
         versionLabel.setText(versionLabel.getText().toString()

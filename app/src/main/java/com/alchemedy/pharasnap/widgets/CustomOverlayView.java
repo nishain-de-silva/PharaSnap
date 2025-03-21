@@ -2,7 +2,6 @@ package com.alchemedy.pharasnap.widgets;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -17,7 +16,6 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.OnTapListener;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 
@@ -112,7 +110,7 @@ public class CustomOverlayView extends FrameLayout {
                         onTapListener.onTap(new CoordinateF(x, y));
                         return true; // Consume the event
                     } else {
-                        onTapListener.onDrag(
+                        onTapListener.onMove(
                                 (float) Math.sqrt(Math.pow(x - downCoordinate.x, 2) + Math.pow(y - downCoordinate.y, 2))
                         );
                     }

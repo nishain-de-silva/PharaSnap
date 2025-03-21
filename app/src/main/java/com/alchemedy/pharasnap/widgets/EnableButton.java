@@ -6,12 +6,20 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 
+import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 import com.alchemedy.pharasnap.helper.OnTapListener;
 
 public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton {
-    OnTapListener onTapListener;
+
+    public abstract static class TouchDelegateListener {
+        public abstract void onTap(CoordinateF tappedCoordinate);
+        public abstract void onDragGestureStarted(CoordinateF tappedCoordinate);
+        public abstract void onRelease(CoordinateF coordinate);
+    }
+    TouchDelegateListener onTapListener;
     WindowManager.LayoutParams params;
+    public boolean isExpanded = false;
     View overlayView;
     WindowManager windowManager;
     public EnableButton(Context context) {
@@ -26,20 +34,15 @@ public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton
         super(context, attrs, defStyleAttr);
     }
 
-    public void configure(OnTapListener onTapListener, View overlayView, WindowManager windowManager, WindowManager.LayoutParams params) {
+    public void configure(TouchDelegateListener onTapListener, View overlayView, WindowManager windowManager, WindowManager.LayoutParams params) {
         this.overlayView = overlayView;
         this.windowManager = windowManager;
         this.params = params;
         this.onTapListener = onTapListener;
-    }
-
-    public void switchToStationaryState() {
-        setOnTouchListener(null);
-        setOnClickListener(v-> onTapListener.onTap(null));
-    }
-
-    public void switchToMovableState() {
+        View buttonContainer = overlayView.findViewById(R.id.buttonContainer);
+        final int GESTURE_UNDETERMINED = 0, GESTURE_TAP = 1, GESTURE_DRAG = 2;
         setOnTouchListener(new OnTouchListener() {
+            int gestureMode = GESTURE_UNDETERMINED;
             CoordinateF enableButtonDownCoordinate = new CoordinateF(0,0);
             private int initialY, initialX;
             @Override
@@ -48,18 +51,40 @@ public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton
                 float x = motionEvent.getRawX();
                 float y = motionEvent.getRawY();
                 if (action == MotionEvent.ACTION_MOVE) {
-                    params.y = (int) (initialY + (y - enableButtonDownCoordinate.y));
-                    params.x = (int) (initialX + (enableButtonDownCoordinate.x - x));
-                    windowManager.updateViewLayout(overlayView, params);
+                    if (isExpanded) {
+                        buttonContainer.setTranslationY(initialY + (y - enableButtonDownCoordinate.y));
+                        buttonContainer.setTranslationX(initialX + (x - enableButtonDownCoordinate.x));
+                    } else {
+                        params.y = (int) (initialY + (y - enableButtonDownCoordinate.y));
+                        params.x = (int) (initialX + (enableButtonDownCoordinate.x - x));
+                        windowManager.updateViewLayout(overlayView, params);
+                    }
+                    if (gestureMode == GESTURE_UNDETERMINED) {
+                        if (!enableButtonDownCoordinate.isCloserTo(x, y, 15)) {
+                            gestureMode = GESTURE_DRAG;
+                            if (!isExpanded)
+                                onTapListener.onDragGestureStarted(new CoordinateF(x, y));
+                        }
+                    }
+
                     return true;
                 } else if (action == MotionEvent.ACTION_UP) {
-                    if(enableButtonDownCoordinate.isCloserTo(x, y, 15)) {
-                        onTapListener.onTap(new CoordinateF(x, y));
-                    }
+                    CoordinateF coordinate = new CoordinateF(x, y);
+                    if(gestureMode == GESTURE_UNDETERMINED && enableButtonDownCoordinate.isCloserTo(x, y, 15)) {
+                        onTapListener.onTap(coordinate);
+                        gestureMode = GESTURE_TAP;
+                    } else if (gestureMode == GESTURE_DRAG && !isExpanded)
+                        onTapListener.onRelease(coordinate);
                     return true;
                 } else if (action == MotionEvent.ACTION_DOWN) {
-                    initialY = params.y;
-                    initialX = params.x;
+                    if (isExpanded) {
+                        initialY = (int) buttonContainer.getTranslationY();
+                        initialX = (int) buttonContainer.getTranslationX();
+                    } else {
+                        initialY = params.y;
+                        initialX = params.x;
+                    }
+                    gestureMode = GESTURE_UNDETERMINED;
                     enableButtonDownCoordinate = new CoordinateF(x, y);
                     return true;
                 }

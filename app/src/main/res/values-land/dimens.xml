@@ -1,3 +1,4 @@
 <resources>
     <dimen name="modal_top_margin">20dp</dimen>
+    <dimen name="hover_delete_button_bottom_margin">50dp</dimen>
 </resources>

@@ -1,6 +1,6 @@
 package com.alchemedy.pharasnap.services;
 
-import android.animation.LayoutTransition;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.app.Notification;
@@ -14,7 +14,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Insets;
 import android.graphics.PixelFormat;
@@ -40,7 +39,6 @@ import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -51,7 +49,6 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
@@ -81,7 +78,7 @@ import java.util.List;
 
 public class NodeExplorerAccessibilityService extends android.accessibilityservice.AccessibilityService {
     private WindowManager windowManager;
-    private View overlayView;
+    private View overlayView, removeWidgetButtonView;
     private WidgetController widgetController;
     private boolean isWidgetExpanded = false;
     private boolean skipNotifyOnWidgetStop = false;
@@ -105,7 +102,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     private int currentOrientation;
     private SharedPreferences sharedPreferences;
 
-    private BroadcastReceiver tileMessageReceiver;
+    private BroadcastReceiver tileMessageReceiver, configurationChangeReceiver;
     private AccessibilityNodeInfo selectedNode;
     private int minArea;
 
@@ -241,6 +238,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                         }
                         sharedPreferences.edit().putString(Constants.ENTRIES_KEY, newArray.toString())
                                 .apply();
+                        entryListAdapter.notifyDataSetChanged();
                     }
                 });
                 inflatedView.findViewById(R.id.list_clear).setOnClickListener(v -> {
@@ -345,6 +343,41 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
     }
 
+    private void onOrientationChanged(Context context, WindowManager.LayoutParams params) {
+        int newOrientation = context.getResources().getConfiguration().orientation;
+        boolean didOrientationChanged = newOrientation != currentOrientation;
+        currentOrientation = newOrientation;
+        if (didOrientationChanged) {
+            if (isWidgetExpanded) {
+                clearAllSelections(false);
+                modal.reLayout();
+            }
+            if (mediaProjectionDisplay != null) {
+                ScreenInfo screenInfo = getScreenConfiguration();
+                mediaProjectionDisplay.resize(screenInfo.width, screenInfo.height, screenInfo.densityDpi);
+                imageReader.close();
+                imageReader = ImageReader.newInstance(screenInfo.width, screenInfo.height, PixelFormat.RGBA_8888, 1);
+                mediaProjectionDisplay.setSurface(imageReader.getSurface());
+            }
+        }
+
+        ViewGroup buttonContainer = overlayView.findViewById(R.id.buttonContainer);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            FrameLayout.LayoutParams buttonContainerParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
+            widgetController.configureOverlayDimensions(buttonContainerParams, isWidgetExpanded, didOrientationChanged);
+            if (!didOrientationChanged)
+                windowManager.updateViewLayout(overlayView, params);
+        } else {
+            if(isWidgetExpanded)
+                buttonContainer.setTranslationX(0);
+            else {
+                params.x = 0;
+                windowManager.updateViewLayout(overlayView, params);
+            }
+        }
+    }
+
     private boolean showFloatingWidget(boolean shouldExpand) {
         if (overlayView != null) {
             Toast.makeText(this, "Widget is already launched", Toast.LENGTH_SHORT).show();
@@ -371,9 +404,17 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
-            params.setFitInsetsTypes(WindowInsets.Type.navigationBars());
+            params.setFitInsetsIgnoringVisibility(true);
         }
 
+        configurationChangeReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                onOrientationChanged(context, params);
+            }
+        };
+
+        registerReceiver(configurationChangeReceiver, new IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED));
         if (Build.VERSION.SDK_INT >= 34) {
             params.setCanPlayMoveAnimation(false);
         } else {
@@ -389,15 +430,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 FirebaseCrashlytics.getInstance().recordException(e);
             }
         }
-
-        ((EnableButton) overlayView.findViewById(R.id.toggleCollapse))
-                .configure(new OnTapListener() {
-                    @Override
-                    public void onTap(CoordinateF tappedCoordinate) {
-                        toggleExpandWidget();
-                    }
-                }, overlayView, windowManager, params);
-
+        configureEnableButton(params);
         widgetController = new WidgetController(this, windowManager, params, overlayView);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
@@ -482,7 +515,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             }
 
             @Override
-            public void onDrag(float dragDistance) {
+            public void onMove(float dragDistance) {
                 if (dragDistance > 50)
                     toggleExpandWidget();
                 else {
@@ -505,38 +538,113 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         return true;
     }
 
-    @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        if (overlayView != null && newConfig.orientation != currentOrientation) {
-            currentOrientation = newConfig.orientation;
-            if (isWidgetExpanded) {
-                clearAllSelections(false);
-                modal.reLayout();
-            }
-            if (mediaProjectionDisplay != null) {
-                ScreenInfo screenInfo = getScreenConfiguration();
-                mediaProjectionDisplay.resize(screenInfo.width, screenInfo.height, screenInfo.densityDpi);
-                imageReader.close();
-                imageReader = ImageReader.newInstance(screenInfo.width, screenInfo.height, PixelFormat.RGBA_8888, 1);
-                mediaProjectionDisplay.setSurface(imageReader.getSurface());
+    private void configureEnableButton(WindowManager.LayoutParams params) {
+        EnableButton enableButton = overlayView.findViewById(R.id.toggleCollapse);
+        enableButton.configure(new EnableButton.TouchDelegateListener() {
+            Rect deleteButtonBounds;
+            ValueAnimator entryAnimator, exitAnimator;
+            WindowManager.LayoutParams removeWidgetButtonParams;
+            @Override
+            public void onTap(CoordinateF tappedCoordinate) {
+                toggleExpandWidget();
             }
 
-            ViewGroup buttonContainer = overlayView.findViewById(R.id.buttonContainer);
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                FrameLayout.LayoutParams buttonContainerParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
-                widgetController.configureOverlayDimensions(buttonContainerParams, isWidgetExpanded, true);
-            } else {
-                if(isWidgetExpanded)
-                    buttonContainer.setTranslationX(0);
-                else {
-                    WindowManager.LayoutParams params = (WindowManager.LayoutParams) overlayView.getLayoutParams();
-                    params.x = 0;
-                    windowManager.updateViewLayout(overlayView, params);
+            @Override
+            public void onDragGestureStarted(CoordinateF coordinate) {
+                removeWidgetButtonView = LayoutInflater.from(NodeExplorerAccessibilityService.this).inflate(R.layout.delete_button, null);
+                if (exitAnimator != null) {
+                    exitAnimator.cancel();
+                    exitAnimator = null;
                 }
+                removeWidgetButtonView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+                    @Override
+                    public void onLayoutChange(View view, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
+                        removeWidgetButtonView.removeOnLayoutChangeListener(this);
+                        int offset = getResources().getDimensionPixelSize(R.dimen.hover_delete_button_bottom_margin);
+                        entryAnimator = ValueAnimator.ofFloat(0, 1);
+                        entryAnimator.setDuration(200);
+                        entryAnimator.addUpdateListener(valueAnimator -> {
+                            if (removeWidgetButtonView == null || overlayView == null) {
+                                entryAnimator.cancel();
+                                entryAnimator = null;
+                                return;
+                            }
+                            float fraction = valueAnimator.getAnimatedFraction();
+                            removeWidgetButtonParams.y = (int) (fraction * offset);
+                            windowManager.updateViewLayout(removeWidgetButtonView, removeWidgetButtonParams);
+                            if (fraction == 1) {
+                                int [] deleteLayoutOrigin = new int[2];
+                                removeWidgetButtonView.getLocationOnScreen(deleteLayoutOrigin);
+                                deleteButtonBounds = new Rect(
+                                        deleteLayoutOrigin[0],
+                                        deleteLayoutOrigin[1],
+                                        deleteLayoutOrigin[0] + removeWidgetButtonView.getWidth(),
+                                        deleteLayoutOrigin[1] + removeWidgetButtonView.getHeight()
+                                );
+                                entryAnimator = null;
+                            }
+                        });
+                        entryAnimator.start();
+                    }
+                });
+                removeWidgetButtonParams = new WindowManager.LayoutParams(
+                        WindowManager.LayoutParams.WRAP_CONTENT,
+                        WindowManager.LayoutParams.WRAP_CONTENT,
+                        WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                        PixelFormat.TRANSLUCENT
+                );
+                removeWidgetButtonParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                windowManager.addView(removeWidgetButtonView, removeWidgetButtonParams);
             }
-        }
+
+            @Override
+            public void onRelease(CoordinateF coordinate) {
+                if (entryAnimator != null) {
+                    entryAnimator.cancel();
+                    entryAnimator = null;
+                }
+                int offset = getResources().getDimensionPixelSize(R.dimen.hover_delete_button_bottom_margin);
+                int[] enableButtonLocation = new int[2];
+                enableButton.getLocationOnScreen(enableButtonLocation);
+                boolean shouldStopWidget = deleteButtonBounds != null && (
+                        deleteButtonBounds.contains(enableButtonLocation[0], enableButtonLocation[1])
+                        || deleteButtonBounds.contains(enableButtonLocation[0] + enableButton.getWidth(), enableButtonLocation[1])
+                        || deleteButtonBounds.contains(enableButtonLocation[0] + enableButton.getWidth(), enableButtonLocation[1] + enableButton.getHeight())
+                                || deleteButtonBounds.contains(enableButtonLocation[0], enableButtonLocation[1] + enableButton.getHeight())
+                        );
+                int initialEnableButtonYLevel = params.y;
+                exitAnimator = ValueAnimator.ofFloat(0, 1);
+                exitAnimator.setDuration(200)
+                        .addUpdateListener(valueAnimator -> {
+                            float fraction = valueAnimator.getAnimatedFraction();
+                            if (removeWidgetButtonView == null || overlayView == null) {
+                                exitAnimator.cancel();
+                                exitAnimator = null;
+                                return;
+                            }
+
+                            removeWidgetButtonParams.y = (int) ((1 - fraction) * offset);
+                            windowManager.updateViewLayout(removeWidgetButtonView, removeWidgetButtonParams);
+                            if (shouldStopWidget) {
+                                params.y = (int) (initialEnableButtonYLevel + (fraction * offset));
+                                windowManager.updateViewLayout(overlayView, params);
+                            }
+
+                            if (fraction == 1) {
+                                windowManager.removeView(removeWidgetButtonView);
+                                removeWidgetButtonView = null;
+                                removeWidgetButtonParams = null;
+                                exitAnimator = null;
+                                if(shouldStopWidget) {
+                                    onStopWidget();
+                                }
+                                deleteButtonBounds = null;
+                            }
+                        });
+                exitAnimator.start();
+            }
+        }, overlayView, windowManager, params);
     }
 
     private void setIsProcessing(boolean isProcessing) {
@@ -780,7 +888,12 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             unregisterReceiver(systemNavigationButtonTapListener);
             systemNavigationButtonTapListener = null;
         }
-
+        if (configurationChangeReceiver != null) {
+            unregisterReceiver(configurationChangeReceiver);
+            configurationChangeReceiver = null;
+        }
+        if (removeWidgetButtonView != null)
+            windowManager.removeView(removeWidgetButtonView);
         windowManager.removeView(overlayView);
         overlayView = null;
         rootOverlay = null;
@@ -844,13 +957,19 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     @Override
-    public void onCreate() {
-        super.onCreate();
+    public void onServiceConnected() {
+        super.onServiceConnected();
         // when this service is created at phone-reboot or re-created by system my memory cleanup
         // it will check the current stale active state and turn it off.
         sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
             ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
+        else if (sharedPreferences.getBoolean(Constants.START_WIDGET_AFTER_ACCESSIBILITY_LAUNCH, false)) {
+            sharedPreferences.edit().remove(Constants.START_WIDGET_AFTER_ACCESSIBILITY_LAUNCH).apply();
+            if (showFloatingWidget(false))
+                notifyStateOnQuickTile(true);
+        }
+
         tileMessageReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
