@@ -8,14 +8,13 @@ import android.view.WindowManager;
 
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.CoordinateF;
-import com.alchemedy.pharasnap.helper.OnTapListener;
 
 public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton {
 
     public abstract static class TouchDelegateListener {
         public abstract void onTap(CoordinateF tappedCoordinate);
-        public abstract void onDragGestureStarted(CoordinateF tappedCoordinate);
-        public abstract void onRelease(CoordinateF coordinate);
+        public abstract void onDragGestureStarted();
+        public abstract void onRelease();
     }
     TouchDelegateListener onTapListener;
     WindowManager.LayoutParams params;
@@ -63,18 +62,17 @@ public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton
                         if (!enableButtonDownCoordinate.isCloserTo(x, y, 15)) {
                             gestureMode = GESTURE_DRAG;
                             if (!isExpanded)
-                                onTapListener.onDragGestureStarted(new CoordinateF(x, y));
+                                onTapListener.onDragGestureStarted();
                         }
                     }
 
                     return true;
                 } else if (action == MotionEvent.ACTION_UP) {
-                    CoordinateF coordinate = new CoordinateF(x, y);
                     if(gestureMode == GESTURE_UNDETERMINED && enableButtonDownCoordinate.isCloserTo(x, y, 15)) {
-                        onTapListener.onTap(coordinate);
+                        onTapListener.onTap(new CoordinateF(x, y));
                         gestureMode = GESTURE_TAP;
                     } else if (!isExpanded)
-                        onTapListener.onRelease(coordinate);
+                        onTapListener.onRelease();
                     return true;
                 } else if (action == MotionEvent.ACTION_DOWN) {
                     if (isExpanded) {

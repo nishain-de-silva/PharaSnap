@@ -16,12 +16,16 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.alchemedy.pharasnap.helper.OnTapListener;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 
 import java.util.ArrayList;
 
 public class CustomOverlayView extends FrameLayout {
+
+    public static abstract class OnTapListener {
+        public abstract void onTap(CoordinateF tappedCoordinate);
+        public void onMove(float dragDistance) {}
+    }
 
     private Paint paint;
     private int highlightFillColor = Color.parseColor("#6430C5FF");

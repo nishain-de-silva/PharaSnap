@@ -24,6 +24,7 @@ import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.utils.AccessibilityHandler;
 import com.alchemedy.pharasnap.utils.WidgetController;
 import com.alchemedy.pharasnap.widgets.WalkthroughSlider;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import java.util.ArrayList;
 
@@ -127,9 +128,9 @@ public class MainActivity extends AppCompatActivity {
             WidgetController.launchWidget(this, true, WidgetController.DISABLED_PERMISSION_UNKNOWN);
         });
         TextView versionLabel = findViewById(R.id.version_label);
-        versionLabel.setText(versionLabel.getText().toString()
-                .replace("x.x", BuildConfig.VERSION_NAME)
-        );
+        String versionText = versionLabel.getText().toString()
+                .replace("x.x", String.format("%s%s", BuildConfig.VERSION_NAME, BuildConfig.DEBUG ? " (Dev)" : ""));
+        versionLabel.setText(versionText);
         findViewById(R.id.restart_tutorial).setOnClickListener(v -> {
             addTutorials(true);
             showWalkthroughSlider();
@@ -146,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
         pages = new ArrayList<>();
         sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
         needToDisplayInitialWalkthrough = !sharedPreferences.getBoolean(Constants.IS_TUTORIAL_SHOWN, false);
-
+        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG);
         if(!AccessibilityHandler.isAccessibilityServiceEnabled(this))
             pages.add(new WalkthroughSlider.PageContent(
                     needToDisplayInitialWalkthrough ? R.string.accessibility_requirement_description_first_time : R.string.accessibility_requirement_description,

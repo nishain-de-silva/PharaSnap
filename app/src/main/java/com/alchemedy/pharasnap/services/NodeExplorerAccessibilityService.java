@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
@@ -25,6 +26,15 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             floatingWidget = null;
         }
     }
+
+    private void showFloatingWidgetSafety(boolean shouldExpandWidget) {
+        if (floatingWidget == null)
+            floatingWidget = new FloatingWidget(NodeExplorerAccessibilityService.this, shouldExpandWidget);
+        else
+            Toast.makeText(NodeExplorerAccessibilityService.this, "Widget is already launched", Toast.LENGTH_SHORT).show();
+    }
+
+
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
@@ -48,14 +58,8 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                             floatingWidget.skipNotifyOnWidgetStop = true;
                         onStopWidget();
                     }
-                } else if(!shouldSkipNotify) {
-                    if (floatingWidget != null) {
-                        Toast.makeText(NodeExplorerAccessibilityService.this, "Widget is already launched", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    floatingWidget = new FloatingWidget(NodeExplorerAccessibilityService.this, false);
                 } else
-                    floatingWidget = new FloatingWidget(NodeExplorerAccessibilityService.this, true);
+                    showFloatingWidgetSafety(shouldSkipNotify);
                 }
         };
         LocalBroadcastManager.getInstance(this)

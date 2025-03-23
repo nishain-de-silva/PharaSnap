@@ -1,7 +1,6 @@
 package com.alchemedy.pharasnap.utils;
 
 import android.accessibilityservice.AccessibilityService;
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.app.Notification;
@@ -26,6 +25,7 @@ import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
@@ -53,7 +53,6 @@ import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.activities.MediaProjectionRequestActivity;
 import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.CoordinateF;
-import com.alchemedy.pharasnap.helper.OnTapListener;
 import com.alchemedy.pharasnap.helper.ScreenInfo;
 import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
 import com.alchemedy.pharasnap.services.ShortcutTileLauncher;
@@ -78,8 +77,9 @@ import java.util.List;
 public class FloatingWidget {
     final private NodeExplorerAccessibilityService hostingService;
     private WindowManager windowManager;
-    private View overlayView, removeWidgetButtonView;
+    private View overlayView;
     private WidgetController widgetController;
+    private FloatingDismissWidget floatingDismissWidget;
     private boolean isWidgetExpanded = false;
     public boolean skipNotifyOnWidgetStop = false;
     private Modal modal;
@@ -389,6 +389,7 @@ public class FloatingWidget {
 
         currentOrientation = hostingService.getResources().getConfiguration().orientation;
         collectedTexts = new ArrayList<>();
+        floatingDismissWidget = new FloatingDismissWidget(windowManager, overlayView, hostingService);
         // Initial WindowManager params (clicks pass through the overlay)
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -470,7 +471,7 @@ public class FloatingWidget {
         widgetController.prepareInitialState();
 
         // Handle touch events on the overlay
-        rootOverlay.setOnTapListener(new OnTapListener() {
+        rootOverlay.setOnTapListener(new CustomOverlayView.OnTapListener() {
             @Override
             public void onTap(CoordinateF tappedCoordinate) {
                 // Record tap coordinates
@@ -537,100 +538,19 @@ public class FloatingWidget {
     private void configureEnableButton(WindowManager.LayoutParams params) {
         EnableButton enableButton = overlayView.findViewById(R.id.toggleCollapse);
         enableButton.configure(new EnableButton.TouchDelegateListener() {
-            Rect deleteButtonBounds;
-            ValueAnimator entryAnimator, exitAnimator;
-            WindowManager.LayoutParams removeWidgetButtonParams;
             @Override
             public void onTap(CoordinateF tappedCoordinate) {
                 toggleExpandWidget();
             }
 
             @Override
-            public void onDragGestureStarted(CoordinateF coordinate) {
-                if (exitAnimator != null) {
-                    windowManager.removeView(removeWidgetButtonView);
-                    removeWidgetButtonView = null;
-                    deleteButtonBounds = null;
-                    exitAnimator.cancel();
-                    exitAnimator = null;
-                }
-                removeWidgetButtonView = LayoutInflater.from(hostingService).inflate(R.layout.delete_button, null);
-                removeWidgetButtonView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
-                    @Override
-                    public void onLayoutChange(View view, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
-                        removeWidgetButtonView.removeOnLayoutChangeListener(this);
-                        int offset = hostingService.getResources().getDimensionPixelSize(R.dimen.hover_delete_button_bottom_margin);
-                        entryAnimator = ValueAnimator.ofFloat(0, 1);
-                        entryAnimator.setDuration(200);
-                        entryAnimator.addUpdateListener(valueAnimator -> {
-                            float fraction = valueAnimator.getAnimatedFraction();
-                            removeWidgetButtonParams.y = (int) (fraction * offset);
-                            windowManager.updateViewLayout(removeWidgetButtonView, removeWidgetButtonParams);
-                            if (fraction == 1) {
-                                int [] deleteLayoutOrigin = new int[2];
-                                removeWidgetButtonView.getLocationOnScreen(deleteLayoutOrigin);
-                                deleteButtonBounds = new Rect(
-                                        deleteLayoutOrigin[0],
-                                        deleteLayoutOrigin[1],
-                                        deleteLayoutOrigin[0] + removeWidgetButtonView.getWidth(),
-                                        deleteLayoutOrigin[1] + removeWidgetButtonView.getHeight()
-                                );
-                                entryAnimator = null;
-                            }
-                        });
-                        entryAnimator.start();
-                    }
-                });
-                removeWidgetButtonParams = new WindowManager.LayoutParams(
-                        WindowManager.LayoutParams.WRAP_CONTENT,
-                        WindowManager.LayoutParams.WRAP_CONTENT,
-                        WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                        PixelFormat.TRANSLUCENT
-                );
-                removeWidgetButtonParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
-                windowManager.addView(removeWidgetButtonView, removeWidgetButtonParams);
+            public void onDragGestureStarted() {
+                floatingDismissWidget.onGestureStarted();
             }
 
             @Override
-            public void onRelease(CoordinateF coordinate) {
-                if (entryAnimator != null) {
-                    entryAnimator.cancel();
-                    entryAnimator = null;
-                }
-                int offset = hostingService.getResources().getDimensionPixelSize(R.dimen.hover_delete_button_bottom_margin);
-                int[] enableButtonLocation = new int[2];
-                enableButton.getLocationOnScreen(enableButtonLocation);
-                boolean shouldStopWidget = deleteButtonBounds != null && (
-                        deleteButtonBounds.contains(enableButtonLocation[0], enableButtonLocation[1])
-                                || deleteButtonBounds.contains(enableButtonLocation[0] + enableButton.getWidth(), enableButtonLocation[1])
-                                || deleteButtonBounds.contains(enableButtonLocation[0] + enableButton.getWidth(), enableButtonLocation[1] + enableButton.getHeight())
-                                || deleteButtonBounds.contains(enableButtonLocation[0], enableButtonLocation[1] + enableButton.getHeight())
-                );
-                int initialEnableButtonYLevel = params.y;
-                exitAnimator = ValueAnimator.ofFloat(0, 1);
-                exitAnimator.setDuration(200)
-                        .addUpdateListener(valueAnimator -> {
-                            float fraction = valueAnimator.getAnimatedFraction();
-                            removeWidgetButtonParams.y = (int) ((1 - fraction) * offset);
-                            windowManager.updateViewLayout(removeWidgetButtonView, removeWidgetButtonParams);
-                            if (shouldStopWidget) {
-                                params.y = (int) (initialEnableButtonYLevel + (fraction * offset));
-                                windowManager.updateViewLayout(overlayView, params);
-                            }
-
-                            if (fraction == 1) {
-                                windowManager.removeView(removeWidgetButtonView);
-                                removeWidgetButtonView = null;
-                                removeWidgetButtonParams = null;
-                                exitAnimator = null;
-                                if(shouldStopWidget) {
-                                    onStopWidget();
-                                }
-                                deleteButtonBounds = null;
-                            }
-                        });
-                exitAnimator.start();
+            public void onRelease() {
+                floatingDismissWidget.onGestureReleased(enableButton, params);
             }
         }, overlayView, windowManager, params);
     }
@@ -874,10 +794,7 @@ public class FloatingWidget {
         if (systemNavigationButtonTapListener != null)
             hostingService.unregisterReceiver(systemNavigationButtonTapListener);
         hostingService.unregisterReceiver(configurationChangeReceiver);
-        if (removeWidgetButtonView != null) {
-            windowManager.removeView(removeWidgetButtonView);
-            removeWidgetButtonView = null;
-        }
+        floatingDismissWidget.clearResource();
         windowManager.removeView(overlayView);
         overlayView = null;
 
@@ -885,6 +802,7 @@ public class FloatingWidget {
 
         if (mediaProjectionIdleHandler != null) {
             mediaProjectionIdleHandler.removeCallbacks(mediaProjectionIdlePostRunnable);
+            mediaProjectionIdleHandler = null;
         }
         if (mediaProjection != null) {
             mediaProjection.stop();
