@@ -25,12 +25,12 @@
             android:name=".activities.MediaProjectionRequestActivity"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
-            android:theme="@style/Theme.PharaSnap.Alert" />
+            android:theme="@style/Theme.PharaSnap.TransparentActivity" />
         <activity
             android:name=".activities.NoDisplayHelperActivity"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
-            android:theme="@style/Theme.PharaSnap.Alert" />
+            android:theme="@style/Theme.PharaSnap.TransparentActivity" />
         <service
             android:name=".services.NodeExplorerAccessibilityService"
             android:exported="true"

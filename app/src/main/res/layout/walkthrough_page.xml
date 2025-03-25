@@ -43,7 +43,7 @@
         android:layout_marginTop="20dp">
         <Button
             android:id="@+id/page_previous"
-            style="@style/Theme.PharaSnap.SliderButton"
+            style="@style/Theme.PharaSnap.WalkthroughButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="20dp"
@@ -64,7 +64,7 @@
                 android:textColor="#0D203B" />
             <Button
                 android:id="@+id/page_continue"
-                style="@style/Theme.PharaSnap.SliderButton"
+                style="@style/Theme.PharaSnap.WalkthroughButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Next" />
