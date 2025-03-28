@@ -120,18 +120,25 @@ public class WalkthroughSlider extends LinearLayout {
         }
     }
 
-    public void changePage(boolean isForwardDirection, boolean animating) {
+    public boolean changePage(boolean isForwardDirection, boolean animating) {
         PageContent currentPage = list.get(currentIndex);
+        if (isForwardDirection)
+            currentIndex += 1;
+        else {
+            if (currentIndex < 1 || !list.get(currentIndex - 1).canRevisit)
+                return false;
+            currentIndex -= 1;
+        }
         if (currentPage.attachedStateListener != null)
             currentPage.attachedStateListener.onDetach();
-        currentIndex += isForwardDirection ? 1 : -1;
+
         if (isForwardDirection && currentIndex == list.size()) {
             eventHandler.onComplete();
-            return;
+            return true;
         }
         if (!animating) {
             loadPage(isForwardDirection, false);
-            return;
+            return true;
         }
         ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
         animator.addUpdateListener(valueAnimator -> {
@@ -144,6 +151,7 @@ public class WalkthroughSlider extends LinearLayout {
         });
         animator.setDuration(350);
         animator.start();
+        return true;
     }
 
     public void start(ArrayList<PageContent> list, @Nullable EventHandler eventHandler) {

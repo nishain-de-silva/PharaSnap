@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -54,6 +55,7 @@ public class EntryListAdapter extends ArrayAdapter<EntryListAdapter.Item> {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_row, null);
         }
         View sliderContainer = convertView.findViewById(R.id.item_slider);
+        View rootContainer = convertView.findViewById(R.id.item_root);
         if (!item.isDraft) {
             convertView.setOnClickListener(null);
             convertView.setOnTouchListener(new View.OnTouchListener() {
@@ -89,16 +91,13 @@ public class EntryListAdapter extends ArrayAdapter<EntryListAdapter.Item> {
                                     springAnimator.addListener(new AnimatorListenerAdapter() {
                                         @Override
                                         public void onAnimationEnd(Animator animation) {
-                                            FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) sliderContainer.getLayoutParams();;
-                                            ValueAnimator exitAnimator = ValueAnimator.ofInt(sliderContainer.getHeight(), 0).setDuration(200);
-                                            exitAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                                @Override
-                                                public void onAnimationUpdate(@NonNull ValueAnimator valueAnimator) {
-                                                    layoutParams.height = (int) valueAnimator.getAnimatedValue();
-                                                    sliderContainer.setLayoutParams(layoutParams);
-                                                    if (layoutParams.height == 0)
-                                                        onTapListener.onDelete(position, EntryListAdapter.this);
-                                                }
+                                            FrameLayout.LayoutParams rootContainerLayoutParams = (FrameLayout.LayoutParams) rootContainer.getLayoutParams();;
+                                            ValueAnimator exitAnimator = ValueAnimator.ofInt(rootContainer.getHeight(), 0).setDuration(200);
+                                            exitAnimator.addUpdateListener(valueAnimator -> {
+                                                rootContainerLayoutParams.height = (int) valueAnimator.getAnimatedValue();
+                                                rootContainer.setLayoutParams(rootContainerLayoutParams);
+                                                if (rootContainerLayoutParams.height == 0)
+                                                    onTapListener.onDelete(position, EntryListAdapter.this);
                                             });
                                             exitAnimator.start();
                                         }
@@ -131,9 +130,9 @@ public class EntryListAdapter extends ArrayAdapter<EntryListAdapter.Item> {
         }
         if (sliderContainer.getTranslationX() != 0) {
             sliderContainer.setTranslationX(0);
-            FrameLayout.LayoutParams sliderContainerLayoutParams = (FrameLayout.LayoutParams) sliderContainer.getLayoutParams();
-            sliderContainerLayoutParams.height = FrameLayout.LayoutParams.WRAP_CONTENT;
-            sliderContainer.setLayoutParams(sliderContainerLayoutParams);
+            FrameLayout.LayoutParams rootContainerLayoutParams = (FrameLayout.LayoutParams) rootContainer.getLayoutParams();
+            rootContainerLayoutParams.height = ListView.LayoutParams.WRAP_CONTENT;
+            rootContainer.setLayoutParams(rootContainerLayoutParams);
         }
         convertView.findViewById(R.id.item_draft_indicator).setVisibility(item.isDraft ? View.VISIBLE : View.GONE);
         convertView.findViewById(R.id.item_delete_indicator).setVisibility(View.VISIBLE);

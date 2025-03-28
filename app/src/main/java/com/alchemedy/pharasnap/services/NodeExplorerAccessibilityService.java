@@ -1,5 +1,6 @@
 package com.alchemedy.pharasnap.services;
 
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -7,7 +8,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.util.Log;
+import android.os.SystemClock;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
@@ -19,6 +20,7 @@ import com.alchemedy.pharasnap.utils.FloatingWidget;
 public class NodeExplorerAccessibilityService extends android.accessibilityservice.AccessibilityService {
     private BroadcastReceiver startCommandReceiver;
     FloatingWidget floatingWidget;
+    private long previousStartTime;
 
     public void onStopWidget() {
         if (floatingWidget != null) {
@@ -38,6 +40,10 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
+        AccessibilityServiceInfo serviceInfo = getServiceInfo();
+        serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOWS_CHANGED;
+        previousStartTime = SystemClock.elapsedRealtime();
+        setServiceInfo(serviceInfo);
         // when this service is created at phone-reboot or re-created by system my memory cleanup
         // it will check the current stale active state and turn it off.
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
@@ -77,7 +83,21 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     @Override
-    public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {}
+    public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
+        if (accessibilityEvent.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            if ((SystemClock.elapsedRealtime() - previousStartTime) > 3000) {
+                AccessibilityServiceInfo serviceInfo = getServiceInfo();
+                serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOWS_CHANGED;
+                setServiceInfo(serviceInfo);
+            }
+        } else
+        {
+            AccessibilityServiceInfo serviceInfo = getServiceInfo();
+            serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
+            setServiceInfo(serviceInfo);
+            previousStartTime = SystemClock.elapsedRealtime();
+        }
+    }
 
     @Override
     public void onInterrupt() {}

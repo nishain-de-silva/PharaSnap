@@ -30,4 +30,5 @@
         By default all text from all selected text blocks will be automatically copied to clipboard once you exit or collapse the floating widget. Also you can use text selection editor to only select the required text from the text blocks when you tap on the yellow bar.</string>
     <string name="recent_items_tutorial">You can also view your last copied items in the recent list from the floating widget itself. You can remove individual items or clear the list altogether.</string>
     <string name="developer_note">This is an app developed by single person. If love this app useful I would like to hear your feedback and thoughts.</string>
+    <string name="required_content_description">required content description</string>
 </resources>

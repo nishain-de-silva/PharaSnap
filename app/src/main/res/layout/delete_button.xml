@@ -4,8 +4,8 @@
     android:layout_height="match_parent">
     <ImageButton
         android:id="@+id/remove_widget_hover_btn"
-        android:layout_width="@dimen/button_size"
-        android:layout_height="@dimen/button_size"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
         android:background="@drawable/hover_delete_btn_background"
         android:src="@drawable/delete"
         />

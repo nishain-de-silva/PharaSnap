@@ -9,6 +9,7 @@
     tools:context=".activities.MainActivity">
     <LinearLayout
         android:layout_width="match_parent"
+        android:contentDescription="@string/required_content_description"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
         android:orientation="vertical"

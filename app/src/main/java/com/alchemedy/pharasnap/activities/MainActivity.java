@@ -10,9 +10,11 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
+import android.view.accessibility.AccessibilityEvent;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -119,11 +121,19 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public void onBackPressed() {
+        if (walkthroughSlider != null) {
+            if(!walkthroughSlider.changePage(false, true))
+                super.onBackPressed();
+        } else
+            super.onBackPressed();
+    }
+
     private void showMainMenu() {
         setContentView(R.layout.activity_main);
         walkthroughSlider = null;
         View launchButton = findViewById(R.id.launch_widget);
-
         launchButton.setOnClickListener(v -> {
             WidgetController.launchWidget(this, true, WidgetController.DISABLED_PERMISSION_UNKNOWN);
         });

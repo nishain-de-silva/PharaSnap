@@ -1,6 +1,7 @@
 package com.alchemedy.pharasnap.utils;
 
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.app.Notification;
@@ -25,7 +26,6 @@ import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
@@ -38,7 +38,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -780,13 +782,18 @@ public class FloatingWidget {
     }
 
     private void freeSearch(AccessibilityNodeInfo node) {
-        Rect outBounds = new Rect();
-        node.getBoundsInScreen(outBounds);
         String text = getText(node);
         if (!text.isEmpty())
             Log.d("text", text);
         for (int i = 0; i < node.getChildCount(); i++) {
             freeSearch(node.getChild(i));
+        }
+    }
+
+    private void freeSearchWindow(AccessibilityWindowInfo node) {
+        freeSearch(node.getRoot());
+        for (int i = 0; i < node.getChildCount(); i++) {
+            freeSearchWindow(node.getChild(i));
         }
     }
 
@@ -832,8 +839,8 @@ public class FloatingWidget {
             selectedNode = null;
             minArea = Integer.MAX_VALUE;
             AccessibilityNodeInfo root = hostingService.getRootInActiveWindow();
-            isInsideElement(root, (int) x, (int) y);
 //            freeSearch(root);
+            isInsideElement(root, (int) x, (int) y);
             String extractedText = !shouldRetrieveText || selectedNode == null ? "" : getText(selectedNode).trim();
             Rect bounds = new Rect();
             NodeResult result;
