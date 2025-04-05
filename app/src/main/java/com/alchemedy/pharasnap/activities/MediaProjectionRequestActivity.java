@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.MessageHandler;
 
 public class MediaProjectionRequestActivity extends AppCompatActivity {
@@ -18,7 +19,7 @@ public class MediaProjectionRequestActivity extends AppCompatActivity {
         ActivityResultLauncher<Intent> someActivityResultLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
-                    Intent broadcastIntent = new Intent("MEDIA_PROJECTION_DATA");
+                    Intent broadcastIntent = new Intent(Constants.MEDIA_PROJECTION_DATA);
                     int resultCode = result.getResultCode();
                     broadcastIntent.putExtra("resultCode", resultCode);
                     if (resultCode == RESULT_OK) {

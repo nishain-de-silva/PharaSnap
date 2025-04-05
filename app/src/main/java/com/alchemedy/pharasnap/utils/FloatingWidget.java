@@ -15,6 +15,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Insets;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
@@ -34,6 +35,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
@@ -100,6 +102,7 @@ public class FloatingWidget {
 
     private CustomOverlayView rootOverlay;
     private int currentOrientation;
+    private String insetSignature = "";
     final private SharedPreferences sharedPreferences;
     private BroadcastReceiver configurationChangeReceiver;
     public FloatingWidget(NodeExplorerAccessibilityService hostingService, boolean shouldExpand) {
@@ -424,11 +427,13 @@ public class FloatingWidget {
         ViewGroup buttonContainer = overlayView.findViewById(R.id.buttonContainer);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            FrameLayout.LayoutParams buttonContainerParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
-            widgetController.configureOverlayDimensions(buttonContainerParams, isWidgetExpanded, true);
-            if (!didOrientationChanged)
-                windowManager.updateViewLayout(overlayView, params);
-        } else {
+            String newInsetSignature = windowManager.getMaximumWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars()).toString();
+            if(!insetSignature.equals(newInsetSignature)) {
+                FrameLayout.LayoutParams buttonContainerParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
+                widgetController.configureOverlayDimensions(buttonContainerParams, isWidgetExpanded, true);
+            }
+            insetSignature = newInsetSignature;
+        } else if (didOrientationChanged) {
             if(isWidgetExpanded)
                 buttonContainer.setTranslationX(0);
             else {
@@ -447,6 +452,10 @@ public class FloatingWidget {
         modal = new Modal(overlayView);
 
         currentOrientation = hostingService.getResources().getConfiguration().orientation;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
+            insetSignature = navigationBarInset.toString();
+        }
         collectedTexts = new ArrayList<>();
         floatingDismissWidget = new FloatingDismissWidget(windowManager, overlayView, hostingService);
         // Initial WindowManager params (clicks pass through the overlay)
@@ -811,7 +820,7 @@ public class FloatingWidget {
                         null
                 );
             }
-        }, "MEDIA_PROJECTION_DATA");
+        }, Constants.MEDIA_PROJECTION_DATA);
         hostingService.startActivity(activityIntent);
     }
 

@@ -15,4 +15,6 @@ public class Constants {
     public static final String PAYLOAD_EDIT_TEXT = "payloadEditText";
     public static final String WIDGET_IS_STOPPING = "widgetIsStopping";
     public static final String SHOULD_CLOSE_MODAL = "ShouldCloseModal";
+
+    public static final String MEDIA_PROJECTION_DATA = "mediaProjectionData";
 }
