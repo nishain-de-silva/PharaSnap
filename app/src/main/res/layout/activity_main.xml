@@ -9,7 +9,6 @@
     tools:context=".activities.MainActivity">
     <LinearLayout
         android:layout_width="match_parent"
-        android:contentDescription="@string/required_content_description"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
         android:orientation="vertical"
@@ -47,6 +46,30 @@
             android:textSize="18sp"
             android:textColor="@color/darkPurple"
             />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="@color/darkPurple"
+            android:layout_marginTop="12dp"
+            />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="@color/darkPurple"
+            android:textSize="15sp"
+            android:text="@string/troubleshoot_button_label"
+            android:layout_marginVertical="10dp"
+            />
+        <Button
+            android:id="@+id/troubleshhot"
+            android:layout_width="wrap_content"
+            style="@style/Theme.PharaSnap.MainMenuButton"
+            android:layout_height="wrap_content"
+            android:text="Troubleshoot"
+            android:textSize="18sp"
+            android:textColor="@color/darkPurple"
+            />
         </LinearLayout>
     <LinearLayout
             android:layout_width="match_parent"
@@ -73,7 +96,7 @@
                 android:textColor="@color/darkPurple"
                 android:layout_marginBottom="12dp"
                 />
-            <TextView
+            <com.alchemedy.pharasnap.widgets.VersionLabel
                 android:id="@+id/version_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

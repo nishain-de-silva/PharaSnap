@@ -22,8 +22,13 @@
                 android:resource="@xml/app_shortcut_config" />
         </activity>
         <activity
+            android:name=".activities.TroubleshootActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/Theme.PharaSnap" />
+        <activity
             android:name=".activities.MediaProjectionRequestActivity"
             android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize"
             android:launchMode="singleInstance"
             android:theme="@style/Theme.PharaSnap.TransparentActivity" />
         <activity
@@ -31,6 +36,14 @@
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
             android:theme="@style/Theme.PharaSnap.TransparentActivity" />
+        <activity
+            android:name=".activities.EditTextModalActivity"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize"
+            android:noHistory="true"
+            android:launchMode="singleInstance"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.PharaSnap.EditTextModal" />
         <service
             android:name=".services.NodeExplorerAccessibilityService"
             android:exported="true"

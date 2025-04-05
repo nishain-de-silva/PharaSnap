@@ -8,6 +8,7 @@
     <string name="app_shortcut_long_label">Launch widget to copy text on screen</string>
     <string name="text_selection_modal_title">Change text selection</string>
     <string name="entry_list_modal_title">Recent items</string>
+    <string name="change_text_modal_title">Edit text</string>
     <string name="text_detection_failed_in_text_mode">Could not detect any text. Perhaps try Image mode</string>
     <string name="accessibility_enable_alert_description">You must provide PharaSnap access to use Accessibility service to read text and image content on the screen. Go setting and select PharaSnap to enable accessibility service</string>
     <string name="text_detection_failed">Could not detect any text</string>
@@ -16,6 +17,7 @@
     <string name="accessibility_requirement_description_first_time">
         For PharaSnap to capture and copy text on the screen. It need access to Accessibility service to read text block on screen and as well identify images block are placed on the screen for image-to-text recognition. No personal data is collected and shared to third parties
     </string>
+    <string name="troubleshoot_button_label">Not detecting text? try troubleshoot</string>
     <string name="overlay_requirement_description">When using this tool a floating widget displayed over the screen. Please grant permission to draw over other apps. Don\'t worry you can stop the widget when not in use.</string>
     <string name="introduction">PharaSnap can help you copy text on the screen even on places where you don\'t have the facility directly copy text to clipboard. PharaSnap can even capture text on images without ever leaving the app</string>
     <string name="add_tile_description">To make this tool easily accessible to use it is recommended to add the quick settings shortcut in your notification panel. Open your notification panel, in the top section (quick settings panel) then tap to customize the panel and add the shortcut tile provided by this app to the active area. Drag and place it on a convenient place
@@ -30,5 +32,11 @@
         By default all text from all selected text blocks will be automatically copied to clipboard once you exit or collapse the floating widget. Also you can use text selection editor to only select the required text from the text blocks when you tap on the yellow bar.</string>
     <string name="recent_items_tutorial">You can also view your last copied items in the recent list from the floating widget itself. You can remove individual items or clear the list altogether.</string>
     <string name="developer_note">This is an app developed by single person. If love this app useful I would like to hear your feedback and thoughts.</string>
-    <string name="required_content_description">required content description</string>
+    <string name="main_menu_list">main menu list</string>
+    <string name="walkthrough_page_content">walkthrough_page_content</string>
+    <string name="second_troubleshooting_description">During development phase I have experienced text content some apps will not be available to extract like comment text on YouTube app. However after updating that app to latest version might resolve this issue. So if encountered a similar situation please make sure the host app in in latest version.\nIf none works check if accessibility service from app is functioning normally without failure message on accessibility settings page</string>
+    <string name="first_troubleshooting_description">Some app can request some condidential/private pages on the app like igcognito tabs on chrome to be secured and blocks capturing visual contents on the screen which prevents image to text recognition to work. Please make sure content is not placed on secured screen for example like in chrome open the link from igconito tab to normal tab</string>
+    <string name="second_troubleshooting_heading">Not detecting text on Normal mode ?</string>
+    <string name="first_troubleshooting_heading">Not detecting text on image mode ?</string>
+    <string name="troubleshooting_page_header">Troubleshooting</string>
 </resources>

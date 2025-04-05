@@ -56,4 +56,7 @@
         <item name="android:backgroundDimEnabled">false</item>
         <item name="windowNoTitle">true</item>
     </style>
+    <style name="Theme.PharaSnap.EditTextModal" parent="Theme.PharaSnap.TransparentActivity">
+        <item name="android:fontFamily">@font/primary</item>
+    </style>
 </resources>

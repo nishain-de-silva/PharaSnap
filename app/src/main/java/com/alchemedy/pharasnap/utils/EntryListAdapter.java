@@ -55,7 +55,6 @@ public class EntryListAdapter extends ArrayAdapter<EntryListAdapter.Item> {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_row, null);
         }
         View sliderContainer = convertView.findViewById(R.id.item_slider);
-        View rootContainer = convertView.findViewById(R.id.item_root);
         if (!item.isDraft) {
             convertView.setOnClickListener(null);
             convertView.setOnTouchListener(new View.OnTouchListener() {
@@ -91,12 +90,12 @@ public class EntryListAdapter extends ArrayAdapter<EntryListAdapter.Item> {
                                     springAnimator.addListener(new AnimatorListenerAdapter() {
                                         @Override
                                         public void onAnimationEnd(Animator animation) {
-                                            FrameLayout.LayoutParams rootContainerLayoutParams = (FrameLayout.LayoutParams) rootContainer.getLayoutParams();;
-                                            ValueAnimator exitAnimator = ValueAnimator.ofInt(rootContainer.getHeight(), 0).setDuration(200);
+                                            ListView.LayoutParams itemLayoutParams = (ListView.LayoutParams) view.getLayoutParams();;
+                                            ValueAnimator exitAnimator = ValueAnimator.ofInt(view.getHeight(), 0).setDuration(200);
                                             exitAnimator.addUpdateListener(valueAnimator -> {
-                                                rootContainerLayoutParams.height = (int) valueAnimator.getAnimatedValue();
-                                                rootContainer.setLayoutParams(rootContainerLayoutParams);
-                                                if (rootContainerLayoutParams.height == 0)
+                                                itemLayoutParams.height = (int) valueAnimator.getAnimatedValue();
+                                                view.setLayoutParams(itemLayoutParams);
+                                                if (itemLayoutParams.height == 0)
                                                     onTapListener.onDelete(position, EntryListAdapter.this);
                                             });
                                             exitAnimator.start();
@@ -130,9 +129,9 @@ public class EntryListAdapter extends ArrayAdapter<EntryListAdapter.Item> {
         }
         if (sliderContainer.getTranslationX() != 0) {
             sliderContainer.setTranslationX(0);
-            FrameLayout.LayoutParams rootContainerLayoutParams = (FrameLayout.LayoutParams) rootContainer.getLayoutParams();
-            rootContainerLayoutParams.height = ListView.LayoutParams.WRAP_CONTENT;
-            rootContainer.setLayoutParams(rootContainerLayoutParams);
+            ListView.LayoutParams itemLayoutParams = (ListView.LayoutParams) convertView.getLayoutParams();
+            itemLayoutParams.height = ListView.LayoutParams.WRAP_CONTENT;
+            convertView.setLayoutParams(itemLayoutParams);
         }
         convertView.findViewById(R.id.item_draft_indicator).setVisibility(item.isDraft ? View.VISIBLE : View.GONE);
         convertView.findViewById(R.id.item_delete_indicator).setVisibility(View.VISIBLE);

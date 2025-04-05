@@ -32,8 +32,6 @@ public class CustomOverlayView extends FrameLayout {
     private int highlightStrokeColor = Color.parseColor("#30C5FF");
     private final int PRIMARY_STROKE_WIDTH = 3;
 
-    private CoordinateF debugDot = null;
-
     private OnTapListener onTapListener;
     private OnDismissListener onDismissListener;
     ArrayList<RectF> selections = null;
@@ -60,26 +58,12 @@ public class CustomOverlayView extends FrameLayout {
         initPaint();
     }
 
-    public CustomOverlayView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-        super(context, attrs, defStyleAttr, defStyleRes);
-        initPaint();
-    }
-
 
     private void initPaint() {
         paint = new Paint();
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(10);
         paint.setColor(Color.GREEN);
-    }
-
-    public void drawDot(CoordinateF dot) {
-        int[] offset = new int[2];
-        getLocationOnScreen(offset);
-        debugDot = new CoordinateF(dot.x, dot.y);
-        debugDot.x -= offset[0];
-        debugDot.y -= offset[1];
-        invalidate();
     }
 
     public void setOnDismissListener(OnDismissListener onDismissListener) {
@@ -112,6 +96,7 @@ public class CustomOverlayView extends FrameLayout {
                     boolean isTap = downCoordinate.isCloserTo(x, y, 15);
                     if (isTap){
                         onTapListener.onTap(new CoordinateF(x, y));
+                        performClick();
                         return true; // Consume the event
                     } else {
                         onTapListener.onMove(
@@ -127,19 +112,42 @@ public class CustomOverlayView extends FrameLayout {
         });
     }
 
-    public void addNewBoundingBox(Rect boundingBox) {
+    public void addNewBoundingBox(Rect boundingBox, ArrayList<String> capturedTexts, String addedText) {
         if (selections == null) selections = new ArrayList<>();
         int[] offset = new int[2];
         getLocationOnScreen(offset);
         boundingBox.offset(-offset[0], -offset[1]);
-
         RectF animatingBoundingBox = new RectF(boundingBox);
+        for (int i = 0; i < selections.size(); i++) {
+            RectF selection = selections.get(i);
+            if (selection.top >= animatingBoundingBox.top && selection.left >= animatingBoundingBox.left
+                    && selection.bottom <= animatingBoundingBox.bottom && selection.right <= animatingBoundingBox.right) {
+                selections.remove(i);
+                capturedTexts.remove(i);
+            }
+        }
+
+        if (selections.size() > 0) {
+            int index;
+            for (index = 0; index < selections.size(); index++) {
+                RectF selection = selections.get(index);
+                if (animatingBoundingBox.top < selection.top || (animatingBoundingBox.top == selection.top
+                        && animatingBoundingBox.left < selection.left)) {
+                    break;
+                }
+            }
+            selections.add(index, animatingBoundingBox);
+            capturedTexts.add(index, addedText);
+        } else {
+            selections.add(animatingBoundingBox);
+            capturedTexts.add(addedText);
+        }
 
         ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
         valueAnimator.setDuration(200);
         int width = boundingBox.width();
         int height = boundingBox.height();
-        selections.add(animatingBoundingBox);
+
         valueAnimator.addUpdateListener(animation -> {
             float fraction = animation.getAnimatedFraction();
             animatingBoundingBox.set(

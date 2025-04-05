@@ -85,9 +85,7 @@ public class WalkthroughSlider extends LinearLayout {
             paginationIndicator.setVisibility(GONE);
         Button previousButton = inflatedPage.findViewById(R.id.page_previous);
         if (currentIndex > 0 && list.get(currentIndex - 1).canRevisit) {
-            previousButton.setOnClickListener(v -> {
-                changePage(false, true);
-            });
+            previousButton.setOnClickListener(v -> changePage(false, true));
         } else
             previousButton.setVisibility(GONE);
         ((TextView) inflatedPage.findViewById(R.id.page_title)).setText(page.title);
@@ -176,9 +174,7 @@ public class WalkthroughSlider extends LinearLayout {
         indicator.setVisibility(VISIBLE);
         indicator.setText(indicatorText);
         actionButton.setText(getDefaultButtonText());
-        actionButton.setOnClickListener(v -> {
-            changePage(true, true);
-        });
+        actionButton.setOnClickListener(v -> changePage(true, true));
     }
 
     public void onActivityResume() {

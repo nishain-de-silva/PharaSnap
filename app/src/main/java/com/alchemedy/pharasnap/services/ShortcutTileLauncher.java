@@ -12,25 +12,26 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.alchemedy.pharasnap.activities.NoDisplayHelperActivity;
 import com.alchemedy.pharasnap.helper.Constants;
+import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.utils.AccessibilityHandler;
 import com.alchemedy.pharasnap.utils.WidgetController;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
 public class ShortcutTileLauncher extends TileService {
+
     @Override
     public void onTileAdded() {
         super.onTileAdded();
         Tile tile = getQsTile();
-        tile.setState(Tile.STATE_INACTIVE);
+        tile.setState(NodeExplorerAccessibilityService.isWidgetIsShowing ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         tile.updateTile();
-        updateTileStatusInStorage(false);
+        updateTileStatusInStorage(NodeExplorerAccessibilityService.isWidgetIsShowing);
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
         if(!sharedPreferences.getBoolean(Constants.IS_TUTORIAL_SHOWN, false)) {
-            LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(Constants.TILE_ADDED_WHILE_TUTORIAL));
+            new MessageHandler(this).sendBroadcast(new Intent(Constants.TILE_ADDED_WHILE_TUTORIAL));
         }
     }
 
@@ -76,7 +77,7 @@ public class ShortcutTileLauncher extends TileService {
     @Override
     public void onClick() {
         if (tileState == Tile.STATE_ACTIVE) {
-            LocalBroadcastManager.getInstance(this)
+            new MessageHandler(this)
                     .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE)
                             .putExtra(Constants.STOP_WIDGET, true)
                             .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true));
@@ -86,11 +87,8 @@ public class ShortcutTileLauncher extends TileService {
                         .putExtra(Constants.KNOWN_DISABLED_PERMISSIONS_KEY, !canSystemDraw ? WidgetController.OVERLAY_PERMISSION_DISABLED : WidgetController.ACCESSIBILITY_DISABLED)
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } else {
-                LocalBroadcastManager.getInstance(this)
-                        .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE)
-                                .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true));
                 startActivityAndCollapse(new Intent(this, NoDisplayHelperActivity.class)
-                        .putExtra(Constants.IGNORE_SERVICE_LAUNCH, true)
+                        .putExtra(Constants.LAUNCH_SERVICE_WITHOUT_CHECK, true)
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             }
         }

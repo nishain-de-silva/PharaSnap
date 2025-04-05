@@ -1,5 +1,6 @@
 package com.alchemedy.pharasnap.widgets;
 
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.View;
@@ -37,6 +38,17 @@ public class TextHint extends androidx.appcompat.widget.AppCompatTextView {
         setText(text);
     }
 
+    public void changeTextAndNotify(CharSequence text) {
+        if (visibility != View.VISIBLE)
+            setVisibility(View.VISIBLE);
+        else {
+            ObjectAnimator.ofFloat(this, "translationX", 0, -30, 30, 0, -30, 0)
+                    .setDuration(500)
+                    .start();
+        }
+        setText(text);
+    }
+
     @Override
     public void setVisibility(int newVisibility) {
         this.visibility = newVisibility;
@@ -52,9 +64,7 @@ public class TextHint extends androidx.appcompat.widget.AppCompatTextView {
         }
     }
 
-    public void onTextCaptured(OnTapListener onTapListener) {
-        if (visibility != View.VISIBLE)
-            setVisibility(View.VISIBLE);
+    public void setOnTapListener(OnTapListener onTapListener) {
         this.onTapListener = onTapListener;
         setOnClickListener(v -> onTapListener.onTap());
     }

@@ -20,11 +20,11 @@ import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.CoordinateF;
+import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 
@@ -52,8 +52,8 @@ public class WidgetController {
                 Toast.makeText(context, "Please enable the accessibility service", Toast.LENGTH_SHORT).show();
                 context.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
             }
-        }  else {
-            LocalBroadcastManager.getInstance(context)
+        } else {
+            new MessageHandler(context)
                     .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE));
         }
     }
@@ -91,10 +91,11 @@ public class WidgetController {
         rootOverlay = overlayView.findViewById(R.id.rootOverlay);
     }
 
-    public void prepareInitialState() {
-        overlayView.findViewById(R.id.text_hint).setVisibility(View.GONE);
-        enableButton.setImageResource(R.drawable.copy);
-        enableButton.setBackgroundResource(R.drawable.green_circle);
+    public void prepareInitialState(boolean shouldExpand) {
+        if (!shouldExpand)
+            overlayView.findViewById(R.id.text_hint).setVisibility(View.GONE);
+        enableButton.setImageResource(shouldExpand ? R.drawable.collapse : R.drawable.copy);
+        enableButton.setBackgroundResource(shouldExpand ? R.drawable.yellow_color_circle : R.drawable.green_circle);
 
         Resources resources = context.getResources();
         buttonPositions = new ButtonPosition[] {
@@ -116,8 +117,11 @@ public class WidgetController {
                     (int) -(Math.sin(Math.toRadians(currentAngle)) * radius),
                     (int) -(Math.cos(Math.toRadians(currentAngle)) * radius)
             );
-
-            buttonPosition.button.setVisibility(View.GONE);
+            if (shouldExpand) {
+                buttonPosition.button.setTranslationX(buttonPosition.position.x);
+                buttonPosition.button.setTranslationY(buttonPosition.position.y);
+            } else
+                buttonPosition.button.setVisibility(View.GONE);
         }
         buttonContainerSize = new Size(
                 (int) (resources.getDimensionPixelSize(R.dimen.button_size) - buttonPositions[1].position.x),
@@ -125,59 +129,85 @@ public class WidgetController {
                                 + buttonPositions[buttonPositions.length - 1].position.y)
         );
         overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
+        if (shouldExpand) {
+            enableButton.isExpanded = true;
+            rootOverlay.enableTouchListener();
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+
+            FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
+            buttonContainerLayoutParams.height = buttonContainerSize.getHeight();
+            buttonContainerLayoutParams.width = buttonContainerSize.getWidth();
+            buttonContainer.setLayoutParams(buttonContainerLayoutParams);
+            configureOverlayDimensions(buttonContainerLayoutParams, true, false);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // if initially if on landscape while navigation bar is on right side
+            Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
+            if (navigationBarInset.right > 0) {
+                landscapeNavigationBarOffset = navigationBarInset.right;
+                params.x = landscapeNavigationBarOffset;
+            }
+        }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.R)
     public void configureOverlayDimensions(FrameLayout.LayoutParams buttonContainerParams, boolean isExpanded, boolean didOrientationChanged) {
-        Insets navigationBarInsets = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
-        boolean isNavigationBarPlacedOnVerticalEdge = navigationBarInsets.bottom > 0;
-        if (isExpanded) {
-            if (isNavigationBarPlacedOnVerticalEdge) {
-                int navigationBarSize = navigationBarInsets.bottom;
-                params.height = windowManager.getCurrentWindowMetrics().getBounds().height() - navigationBarSize;
-                buttonContainerParams.topMargin = navigationBarSize / 2;
-                params.width = WindowManager.LayoutParams.MATCH_PARENT;
-                if (didOrientationChanged) {
-                    buttonContainer.setTranslationY(0);
-                    buttonContainer.setTranslationX(0);
-                }
-                landscapeNavigationBarOffset = 0;
-            } else {
-                int navigationBarSize = navigationBarInsets.left + navigationBarInsets.right;
-                params.width = windowManager.getCurrentWindowMetrics().getBounds().width() - navigationBarSize;
-                params.height = WindowManager.LayoutParams.MATCH_PARENT;
-                buttonContainerParams.topMargin = 0;
-                buttonContainerParams.bottomMargin = 0;
-                if (didOrientationChanged) {
-                    if (navigationBarInsets.right == 0) {
-                        int insetRight = windowManager.getCurrentWindowMetrics().getWindowInsets().getSystemWindowInsetRight();
-                        buttonContainer.setTranslationX(-insetRight);
-                    } else
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Insets navigationBarInsets = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
+            boolean isNavigationBarPlacedOnVerticalEdge = Math.max(navigationBarInsets.bottom, navigationBarInsets.top) > 0;
+            if (isExpanded) {
+                if (isNavigationBarPlacedOnVerticalEdge) {
+                    int navigationBarSize = Math.max(navigationBarInsets.bottom, navigationBarInsets.top);
+                    params.height = windowManager.getCurrentWindowMetrics().getBounds().height() - navigationBarSize;
+                    if (navigationBarInsets.bottom > 0)
+                        buttonContainerParams.topMargin = navigationBarSize / 2;
+                    else
+                        buttonContainerParams.bottomMargin = navigationBarSize / 2;
+                    params.width = WindowManager.LayoutParams.MATCH_PARENT;
+                    if (didOrientationChanged) {
+                        buttonContainer.setTranslationY(0);
                         buttonContainer.setTranslationX(0);
-                    buttonContainer.setTranslationY(0);
+                    }
+                    landscapeNavigationBarOffset = 0;
+                } else {
+                    int navigationBarSize = navigationBarInsets.left + navigationBarInsets.right;
+                    params.width = windowManager.getCurrentWindowMetrics().getBounds().width() - navigationBarSize;
+                    params.height = WindowManager.LayoutParams.MATCH_PARENT;
+                    buttonContainerParams.topMargin = 0;
+                    buttonContainerParams.bottomMargin = 0;
+                    if (didOrientationChanged) {
+                        if (navigationBarInsets.right == 0) {
+                            int insetRight = windowManager.getCurrentWindowMetrics().getWindowInsets().getSystemWindowInsetRight();
+                            buttonContainer.setTranslationX(-insetRight);
+                        } else
+                            buttonContainer.setTranslationX(0);
+                        buttonContainer.setTranslationY(0);
+                    }
+                    landscapeNavigationBarOffset = navigationBarInsets.right > 0 ? navigationBarSize : 0;
                 }
-                landscapeNavigationBarOffset = navigationBarInsets.right > 0 ? navigationBarSize : 0;
+                if (didOrientationChanged)
+                    buttonContainer.setLayoutParams(buttonContainerParams);
+            } else if (didOrientationChanged) {
+                if (isNavigationBarPlacedOnVerticalEdge || navigationBarInsets.right == 0) {
+                    if (navigationBarInsets.right == 0) {
+                        params.x = windowManager.getCurrentWindowMetrics().getWindowInsets().getSystemWindowInsetRight();
+                    } else
+                        params.x = 0;
+                    landscapeNavigationBarOffset = 0;
+                } else {
+                    params.x = navigationBarInsets.right;
+                    landscapeNavigationBarOffset = navigationBarInsets.right;
+                }
+                params.y = 0;
             }
-            if (didOrientationChanged)
-                buttonContainer.setLayoutParams(buttonContainerParams);
-        } else if (didOrientationChanged) {
-            if (isNavigationBarPlacedOnVerticalEdge || navigationBarInsets.right == 0) {
-                if (navigationBarInsets.right == 0) {
-                    params.x = windowManager.getCurrentWindowMetrics().getWindowInsets().getSystemWindowInsetRight();
-                } else
-                    params.x = 0;
-                landscapeNavigationBarOffset = 0;
-            } else {
-                params.x = navigationBarInsets.right;
-                landscapeNavigationBarOffset = navigationBarInsets.right;
+            if (isExpanded) {
+                params.gravity = (navigationBarInsets.left > 0 ? Gravity.END : Gravity.START) | Gravity.TOP;
             }
-            params.y = 0;
-        }
-        if (isExpanded) {
-            params.gravity = (navigationBarInsets.left > 0 ? Gravity.END : Gravity.START) | Gravity.TOP;
-        }
-        if (didOrientationChanged) {
-            windowManager.updateViewLayout(overlayView, params);
+            if (didOrientationChanged) {
+                windowManager.updateViewLayout(overlayView, params);
+            }
+        } else {
+            params.gravity = Gravity.START | Gravity.TOP;
+            params.height = WindowManager.LayoutParams.MATCH_PARENT;
+            params.width = WindowManager.LayoutParams.MATCH_PARENT;
         }
     }
 
@@ -191,13 +221,7 @@ public class WidgetController {
 
         FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-            configureOverlayDimensions(buttonContainerLayoutParams, true, false);
-        else {
-            params.gravity = Gravity.START | Gravity.TOP;
-            params.height = WindowManager.LayoutParams.MATCH_PARENT;
-            params.width = WindowManager.LayoutParams.MATCH_PARENT;
-        }
+        configureOverlayDimensions(buttonContainerLayoutParams, true, false);
 
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
         buttonContainer.setTranslationY(params.y);
@@ -211,9 +235,9 @@ public class WidgetController {
         ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(duration);
         animator.addUpdateListener(valueAnimator -> {
             double fraction = valueAnimator.getAnimatedFraction();
-            for (int i = 0; i < buttonPositions.length; i++) {
-                buttonPositions[i].button.setTranslationX((float) (buttonPositions[i].position.x * fraction));
-                buttonPositions[i].button.setTranslationY((float) (buttonPositions[i].position.y * fraction));
+            for (ButtonPosition buttonPosition : buttonPositions) {
+                buttonPosition.button.setTranslationX((float) (buttonPosition.position.x * fraction));
+                buttonPosition.button.setTranslationY((float) (buttonPosition.position.y * fraction));
             }
         });
         animator.setDuration(duration);
@@ -227,9 +251,9 @@ public class WidgetController {
         ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(duration);
         animator.addUpdateListener(valueAnimator -> {
             double fraction = 1 - valueAnimator.getAnimatedFraction();
-            for (int i = 0; i < buttonPositions.length; i++) {
-                buttonPositions[i].button.setTranslationX((float) (buttonPositions[i].position.x * fraction));
-                buttonPositions[i].button.setTranslationY((float) (buttonPositions[i].position.y * fraction));
+            for (ButtonPosition buttonPosition: buttonPositions) {
+                buttonPosition.button.setTranslationX((float) (buttonPosition.position.x * fraction));
+                buttonPosition.button.setTranslationY((float) (buttonPosition.position.y * fraction));
             }
             if (fraction == 0) {
                 enableButton.setImageResource(R.drawable.copy);

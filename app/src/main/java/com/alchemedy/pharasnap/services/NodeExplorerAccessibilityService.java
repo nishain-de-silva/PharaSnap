@@ -5,27 +5,27 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.SystemClock;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
 import com.alchemedy.pharasnap.helper.Constants;
+import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.utils.FloatingWidget;
 
 public class NodeExplorerAccessibilityService extends android.accessibilityservice.AccessibilityService {
-    private BroadcastReceiver startCommandReceiver;
     FloatingWidget floatingWidget;
+    private MessageHandler messageHandler;
+    public static boolean isWidgetIsShowing;
     private long previousStartTime;
 
     public void onStopWidget() {
         if (floatingWidget != null) {
             floatingWidget.releaseResources();
             floatingWidget = null;
+            isWidgetIsShowing = false;
         }
     }
 
@@ -36,16 +36,15 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             Toast.makeText(NodeExplorerAccessibilityService.this, "Widget is already launched", Toast.LENGTH_SHORT).show();
     }
 
-
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
         AccessibilityServiceInfo serviceInfo = getServiceInfo();
         serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOWS_CHANGED;
-        previousStartTime = SystemClock.elapsedRealtime();
         setServiceInfo(serviceInfo);
         // when this service is created at phone-reboot or re-created by system my memory cleanup
         // it will check the current stale active state and turn it off.
+        messageHandler = new MessageHandler(this);
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
             ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
@@ -54,44 +53,41 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             floatingWidget = new FloatingWidget(this, false);
         }
 
-        startCommandReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                boolean shouldSkipNotify = intent.hasExtra(Constants.SKIP_NOTIFY_QUICK_TILE);
-                if (intent.hasExtra(Constants.STOP_WIDGET)) {
-                    if (floatingWidget != null) {
-                        if (shouldSkipNotify)
-                            floatingWidget.skipNotifyOnWidgetStop = true;
-                        onStopWidget();
+        messageHandler
+                .registerReceiver(new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        boolean shouldSkipNotify = intent.hasExtra(Constants.SKIP_NOTIFY_QUICK_TILE);
+                        if (intent.hasExtra(Constants.STOP_WIDGET)) {
+                            if (floatingWidget != null) {
+                                if (shouldSkipNotify)
+                                    floatingWidget.skipNotifyOnWidgetStop = true;
+                                messageHandler.sendBroadcast(new Intent(Constants.WIDGET_IS_STOPPING));
+                                onStopWidget();
+                            }
+                        } else
+                            showFloatingWidgetSafety(shouldSkipNotify);
                     }
-                } else
-                    showFloatingWidgetSafety(shouldSkipNotify);
-                }
-        };
-        LocalBroadcastManager.getInstance(this)
-                .registerReceiver(startCommandReceiver, new IntentFilter(Constants.ACCESSIBILITY_SERVICE));
+                }, Constants.ACCESSIBILITY_SERVICE);
     }
 
     @Override
     public void onDestroy() {
-        if (startCommandReceiver != null) {
-            LocalBroadcastManager.getInstance(this).unregisterReceiver(startCommandReceiver);
-            startCommandReceiver = null;
-        }
         super.onDestroy();
+        messageHandler.unregisterReceiver(Constants.ACCESSIBILITY_SERVICE);
         onStopWidget();
     }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
+//        Log.d("info", "onAccessibilityEvent called "+AccessibilityEvent.eventTypeToString(accessibilityEvent.getEventType())+" "+accessibilityEvent.getPackageName()+" "+accessibilityEvent.getClassName() + " "+accessibilityEvent.getContentDescription());
         if (accessibilityEvent.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             if ((SystemClock.elapsedRealtime() - previousStartTime) > 3000) {
                 AccessibilityServiceInfo serviceInfo = getServiceInfo();
                 serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOWS_CHANGED;
                 setServiceInfo(serviceInfo);
             }
-        } else
-        {
+        } else {
             AccessibilityServiceInfo serviceInfo = getServiceInfo();
             serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
             setServiceInfo(serviceInfo);

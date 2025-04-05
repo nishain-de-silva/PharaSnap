@@ -26,6 +26,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
     Paint paint = new Paint();
     private Path selectedTextPath;
     private float lineSpacingExtra;
+    private int cursorWidth;
 
     //    ArrayList<Rect> lineBounds = new ArrayList<>();
     public SelectionEditorTextView(Context context) {
@@ -70,8 +71,8 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
             layout.getLineBounds(lineIndex, bounds);
             bounds.offset(paddingInset.x, paddingInset.y);
             int lineTop = bounds.top;
-            int lineBottom = bounds.bottom;
-            lineHeight = lineBottom - lineTop - lineSpacingExtra;
+            lineHeight =  bounds.bottom - lineTop - (lineIndex + 1 < layout.getLineCount() ? lineSpacingExtra : 0);
+            float lineBottom = lineTop + lineHeight;
             cursorIndex = offset;
             cursorCoordinate = new CoordinateF(positionX + paddingInset.x, lineTop + (lineHeight / 2f) + paddingInset.y);
             this.lineIndex = lineIndex;
@@ -188,6 +189,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
     void init() {
         cursorColor = ContextCompat.getColor(getContext(), R.color.darkPurple);
         selectedTextColor = ContextCompat.getColor(getContext(), R.color.textSelection);
+        cursorWidth = getResources().getDimensionPixelSize(R.dimen.cursor_width);
     }
 
     public void selectAllText() {
@@ -310,7 +312,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
             paint.setColor(cursorColor);
 
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(5);
+            paint.setStrokeWidth(cursorWidth);
             canvas.drawLine(startCursor.cursorCoordinate.x, startCursor.cursorThumbRect.top - startCursor.lineHeight, startCursor.cursorCoordinate.x, startCursor.cursorThumbRect.top, paint);
             canvas.drawLine(endCursor.cursorCoordinate.x, endCursor.cursorThumbRect.top - endCursor.lineHeight, endCursor.cursorCoordinate.x, endCursor.cursorThumbRect.top, paint);
             paint.setStyle(Paint.Style.FILL);

@@ -2,15 +2,14 @@ package com.alchemedy.pharasnap.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.alchemedy.pharasnap.R;
+import com.alchemedy.pharasnap.helper.MessageHandler;
 
 public class MediaProjectionRequestActivity extends AppCompatActivity {
     @Override
@@ -26,8 +25,9 @@ public class MediaProjectionRequestActivity extends AppCompatActivity {
                         // There are no request codes
                         Intent data = result.getData();
                         broadcastIntent.putExtra("data", data);
-                    }
-                    LocalBroadcastManager.getInstance(MediaProjectionRequestActivity.this)
+                    } else
+                        Toast.makeText(this, "Screen recording is needed to capture text on images", Toast.LENGTH_SHORT).show();
+                    new MessageHandler(MediaProjectionRequestActivity.this)
                             .sendBroadcast(broadcastIntent);
                     finish();
                 });

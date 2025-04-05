@@ -2,28 +2,26 @@ package com.alchemedy.pharasnap.utils;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.os.Build;
-import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.TextView;
 
 import com.alchemedy.pharasnap.R;
 
 public class Modal {
-    private final WindowManager windowManager;
     View overlayView;
     private ModalCallback currentModalCallback;
     public abstract static class ModalCallback {
 
         public void onBeforeModalShown(ViewGroup inflatedView) {}
-        public void onOpened(ViewGroup inflatedView, boolean isModalAlreadyOpened) {};
+        public void onOpened(ViewGroup inflatedView, boolean isModalAlreadyOpened) {}
 
         public void onHeaderBackPressed(ViewGroup modalWindow) {
             handleDefaultClose(modalWindow);
-        };
+        }
+
+        public void onModalClosed() {}
     }
 
     static void handleDefaultClose(ViewGroup modalWindow) {
@@ -41,11 +39,14 @@ public class Modal {
         animator.start();
     }
 
-    public Modal(View rootView, WindowManager windowManager) {
-        this.windowManager = windowManager;
+    public Modal(View rootView) {
         overlayView = rootView;
         ViewGroup modalRootWindow = overlayView.findViewById(R.id.modal_window);
-        modalRootWindow.setOnClickListener(v -> handleDefaultClose(modalRootWindow));
+        modalRootWindow.setOnClickListener(v -> {
+            currentModalCallback.onModalClosed();
+            currentModalCallback = null;
+            handleDefaultClose(modalRootWindow);
+        });
     }
 
     public enum ModalType {
@@ -55,8 +56,13 @@ public class Modal {
 
     public void closeModal() {
         ViewGroup modalWindow = overlayView.findViewById(R.id.modal_window);
-        if(modalWindow.getVisibility() == View.VISIBLE)
+        if(modalWindow.getVisibility() == View.VISIBLE) {
+            if (currentModalCallback != null) {
+                currentModalCallback.onModalClosed();
+                currentModalCallback = null;
+            }
             handleDefaultClose(modalWindow);
+        }
     }
 
     public void reLayout() {
@@ -76,6 +82,19 @@ public class Modal {
         return false;
     }
 
+    private int getHeadingTextId(ModalType modalType) {
+        if (modalType == ModalType.EDIT_SELECTION)
+            return R.string.text_selection_modal_title;
+        return R.string.entry_list_modal_title;
+    }
+
+    private int getContentLayoutId(ModalType modalType) {
+        if (modalType == ModalType.EDIT_SELECTION)
+            return R.layout.edit_text_selection;
+        return R.layout.list_window;
+    }
+
+
     public void showModal(ModalType modalType, ModalCallback modalCallback) {
         currentModalCallback = modalCallback;
         Context context = overlayView.getContext();
@@ -83,16 +102,12 @@ public class Modal {
         int topPadding = context.getResources().getDimensionPixelSize(R.dimen.modal_top_margin);
         modalRootWindow.setPadding(0, topPadding, 0, 0);
         ViewGroup content = overlayView.findViewById(R.id.modal_content);
-        ((TextView) modalRootWindow.findViewById(R.id.modal_back_title)).setText(
-                modalType == ModalType.EDIT_SELECTION ? R.string.text_selection_modal_title
-                : R.string.entry_list_modal_title);
-        modalRootWindow.findViewById(R.id.modal_back).setOnClickListener(v -> {
-            modalCallback.onHeaderBackPressed(modalRootWindow);
-        });
+        ((TextView) modalRootWindow.findViewById(R.id.modal_back_title)).setText(getHeadingTextId(modalType));
+        modalRootWindow.findViewById(R.id.modal_back).setOnClickListener(v -> modalCallback.onHeaderBackPressed(modalRootWindow));
 
         content.removeAllViews();
         ViewGroup inflatedContent = (ViewGroup) LayoutInflater.from(context).inflate(
-                modalType == ModalType.EDIT_SELECTION ? R.layout.edit_text_selection : R.layout.list_window,
+                getContentLayoutId(modalType),
                 null);
         content.addView(inflatedContent);
         View container = modalRootWindow.findViewById(R.id.modal_container);

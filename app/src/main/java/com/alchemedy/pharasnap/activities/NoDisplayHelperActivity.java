@@ -1,17 +1,13 @@
 package com.alchemedy.pharasnap.activities;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.alchemedy.pharasnap.helper.Constants;
-import com.alchemedy.pharasnap.utils.AccessibilityHandler;
+import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.utils.WidgetController;
 
 public class NoDisplayHelperActivity extends AppCompatActivity {
@@ -19,7 +15,11 @@ public class NoDisplayHelperActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Intent intent = getIntent();
-        if (!intent.getBooleanExtra(Constants.IGNORE_SERVICE_LAUNCH, false)) {
+        if (intent.getBooleanExtra(Constants.LAUNCH_SERVICE_WITHOUT_CHECK, false)) {
+            new MessageHandler(this)
+                    .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE)
+                            .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true));
+        } else {
             WidgetController.launchWidget(
                     this,
                     false,

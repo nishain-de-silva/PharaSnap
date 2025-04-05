@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_weight="1"
+        android:layout_height="0dp">
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/text_container"
+            android:layout_marginBottom="12dp">
+            <androidx.appcompat.widget.AppCompatEditText
+                android:id="@+id/changed_text"
+                android:textColor="@android:color/black"
+                android:textSize="15sp"
+                android:textSelectHandleLeft="@drawable/dark_circle"
+                android:textSelectHandle="@drawable/dark_circle"
+                android:textSelectHandleRight="@drawable/dark_circle"
+                android:textCursorDrawable="@drawable/dark_cursor"
+                android:background="@android:color/transparent"
+                android:layout_width="match_parent"
+                android:textColorHighlight="@color/primaryBlue"
+                android:lineSpacingExtra="5dp"
+                android:paddingStart="@dimen/thumb_size"
+                android:paddingEnd="10dp"
+                android:paddingTop="10dp"
+                android:textColorHint="@color/darkPurple"
+                android:paddingBottom="@dimen/thumb_size"
+                android:layout_height="wrap_content"
+                />
+        </FrameLayout>
+    </ScrollView>
+</LinearLayout>
