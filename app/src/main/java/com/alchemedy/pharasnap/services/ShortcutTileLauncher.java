@@ -3,13 +3,9 @@ package com.alchemedy.pharasnap.services;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.os.Handler;
-import android.os.Looper;
 import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
-import android.util.Log;
-import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 
@@ -17,18 +13,19 @@ import com.alchemedy.pharasnap.activities.NoDisplayHelperActivity;
 import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.utils.AccessibilityHandler;
+import com.alchemedy.pharasnap.utils.FloatingWidget;
 import com.alchemedy.pharasnap.utils.WidgetController;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
 public class ShortcutTileLauncher extends TileService {
-
+    public static int expectedTileState = Tile.STATE_UNAVAILABLE;
     @Override
     public void onTileAdded() {
         super.onTileAdded();
         Tile tile = getQsTile();
-        tile.setState(NodeExplorerAccessibilityService.isWidgetIsShowing ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
+        expectedTileState = Tile.STATE_UNAVAILABLE;
+        tile.setState(FloatingWidget.isWidgetIsShowing ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         tile.updateTile();
-        updateTileStatusInStorage(NodeExplorerAccessibilityService.isWidgetIsShowing);
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
         if(!sharedPreferences.getBoolean(Constants.IS_TUTORIAL_SHOWN, false)) {
             new MessageHandler(this).sendBroadcast(new Intent(Constants.TILE_ADDED_WHILE_TUTORIAL));
@@ -38,17 +35,8 @@ public class ShortcutTileLauncher extends TileService {
     @Override
     public void onTileRemoved() {
         super.onTileRemoved();
-        updateTileStatusInStorage(false);
     }
 
-    private void updateTileStatusInStorage(boolean isActive) {
-        SharedPreferences.Editor sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE).edit();
-        if (isActive)
-            sharedPreferences.putBoolean(Constants.TILE_ACTIVE_KEY, true);
-        else
-            sharedPreferences.remove(Constants.TILE_ACTIVE_KEY);
-        sharedPreferences.apply();
-    }
 
     int tileState;
     private boolean isAccessibilityServiceRunning;
@@ -59,18 +47,27 @@ public class ShortcutTileLauncher extends TileService {
         Tile tile = getQsTile();
 
         tileState = tile.getState();
-        if (tileState == Tile.STATE_ACTIVE) {
-            tile.setState(Tile.STATE_INACTIVE);
-            tile.updateTile();
-            updateTileStatusInStorage(false);
+        if (expectedTileState == Tile.STATE_UNAVAILABLE) {
+            if (tileState == Tile.STATE_ACTIVE) {
+                tile.setState(Tile.STATE_INACTIVE);
+                tile.updateTile();
+            } else {
+                isAccessibilityServiceRunning = AccessibilityHandler.isAccessibilityServiceEnabled(this);
+                canSystemDraw = Settings.canDrawOverlays(this);
+                if (isAccessibilityServiceRunning && canSystemDraw) {
+                    tile.setState(Tile.STATE_ACTIVE);
+                    tile.updateTile();
+                }
+            }
         } else {
-            isAccessibilityServiceRunning = AccessibilityHandler.isAccessibilityServiceEnabled(this);
-            canSystemDraw = Settings.canDrawOverlays(this);
-            if (isAccessibilityServiceRunning && canSystemDraw) {
+            if (expectedTileState == Tile.STATE_INACTIVE && tileState == Tile.STATE_ACTIVE) {
+                tile.setState(Tile.STATE_INACTIVE);
+                tile.updateTile();
+            } else if (expectedTileState == Tile.STATE_ACTIVE && tileState == Tile.STATE_INACTIVE) {
                 tile.setState(Tile.STATE_ACTIVE);
-                updateTileStatusInStorage(true);
                 tile.updateTile();
             }
+            expectedTileState = Tile.STATE_UNAVAILABLE;
         }
     }
 

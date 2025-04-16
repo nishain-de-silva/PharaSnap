@@ -27,6 +27,7 @@ import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.service.quicksettings.Tile;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
@@ -75,6 +76,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FloatingWidget {
+    public static boolean isWidgetIsShowing;
     final private NodeExplorerAccessibilityService hostingService;
     private WindowManager windowManager;
     private View overlayView;
@@ -106,7 +108,7 @@ public class FloatingWidget {
     final private SharedPreferences sharedPreferences;
     private BroadcastReceiver configurationChangeReceiver;
     public FloatingWidget(NodeExplorerAccessibilityService hostingService, boolean shouldExpand) {
-        NodeExplorerAccessibilityService.isWidgetIsShowing = true;
+        isWidgetIsShowing = true;
         sharedPreferences = hostingService.getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, Context.MODE_PRIVATE);
         this.hostingService = hostingService;
         messageHandler = new MessageHandler(hostingService);
@@ -825,10 +827,10 @@ public class FloatingWidget {
     }
 
     private void notifyStateOnQuickTile(boolean newState) {
-        if (
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
-                        newState != sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            ShortcutTileLauncher.expectedTileState = newState ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE;
             ShortcutTileLauncher.requestListeningState(hostingService, new ComponentName(hostingService, ShortcutTileLauncher.class));
+        }
     }
 
     private void isInsideElement(AccessibilityNodeInfo node, int coordinateX, int coordinateY) {

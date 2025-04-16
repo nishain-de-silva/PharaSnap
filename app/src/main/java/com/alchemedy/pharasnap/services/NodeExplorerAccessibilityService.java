@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.SystemClock;
+import android.service.quicksettings.Tile;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
@@ -18,13 +19,13 @@ import com.alchemedy.pharasnap.utils.FloatingWidget;
 public class NodeExplorerAccessibilityService extends android.accessibilityservice.AccessibilityService {
     FloatingWidget floatingWidget;
     private MessageHandler messageHandler;
-    public static boolean isWidgetIsShowing;
+
 
     public void onStopWidget() {
         if (floatingWidget != null) {
             floatingWidget.releaseResources();
             floatingWidget = null;
-            isWidgetIsShowing = false;
+            FloatingWidget.isWidgetIsShowing = false;
         }
     }
 
@@ -42,8 +43,10 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         // it will check the current stale active state and turn it off.
         messageHandler = new MessageHandler(this);
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            ShortcutTileLauncher.expectedTileState = Tile.STATE_INACTIVE;
             ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
+        }
         else if (sharedPreferences.getBoolean(Constants.START_WIDGET_AFTER_ACCESSIBILITY_LAUNCH, false)) {
             sharedPreferences.edit().remove(Constants.START_WIDGET_AFTER_ACCESSIBILITY_LAUNCH).apply();
             floatingWidget = new FloatingWidget(this, false);
