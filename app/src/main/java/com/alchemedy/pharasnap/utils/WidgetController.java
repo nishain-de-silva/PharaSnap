@@ -137,8 +137,8 @@ public class WidgetController {
             FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
             buttonContainerLayoutParams.height = buttonContainerSize.getHeight();
             buttonContainerLayoutParams.width = buttonContainerSize.getWidth();
+            configureOverlayDimensions(buttonContainerLayoutParams, true, false, false);
             buttonContainer.setLayoutParams(buttonContainerLayoutParams);
-            configureOverlayDimensions(buttonContainerLayoutParams, true, false);
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // if initially if on landscape while navigation bar is on right side
             Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
@@ -149,7 +149,7 @@ public class WidgetController {
         }
     }
 
-    public void configureOverlayDimensions(FrameLayout.LayoutParams buttonContainerParams, boolean isExpanded, boolean didOrientationChanged) {
+    public void configureOverlayDimensions(FrameLayout.LayoutParams buttonContainerParams, boolean isExpanded, boolean shouldResetPosition, boolean shouldUpdateLayout) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Insets navigationBarInsets = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
             boolean isNavigationBarPlacedOnVerticalEdge = Math.max(navigationBarInsets.bottom, navigationBarInsets.top) > 0;
@@ -162,7 +162,7 @@ public class WidgetController {
                     else
                         buttonContainerParams.bottomMargin = navigationBarSize / 2;
                     params.width = WindowManager.LayoutParams.MATCH_PARENT;
-                    if (didOrientationChanged) {
+                    if (shouldResetPosition) {
                         buttonContainer.setTranslationY(0);
                         buttonContainer.setTranslationX(0);
                     }
@@ -173,35 +173,36 @@ public class WidgetController {
                     params.height = WindowManager.LayoutParams.MATCH_PARENT;
                     buttonContainerParams.topMargin = 0;
                     buttonContainerParams.bottomMargin = 0;
-                    if (didOrientationChanged) {
+                    if (shouldResetPosition) {
                         if (navigationBarInsets.right == 0) {
-                            int insetRight = windowManager.getCurrentWindowMetrics().getWindowInsets().getSystemWindowInsetRight();
+                            int insetRight = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.displayCutout()).right;
                             buttonContainer.setTranslationX(-insetRight);
                         } else
                             buttonContainer.setTranslationX(0);
                         buttonContainer.setTranslationY(0);
                     }
-                    landscapeNavigationBarOffset = navigationBarInsets.right > 0 ? navigationBarSize : 0;
+                    landscapeNavigationBarOffset = Math.max(navigationBarInsets.right, 0);
                 }
-                if (didOrientationChanged)
+                if (shouldUpdateLayout)
                     buttonContainer.setLayoutParams(buttonContainerParams);
-            } else if (didOrientationChanged) {
-                if (isNavigationBarPlacedOnVerticalEdge || navigationBarInsets.right == 0) {
-                    if (navigationBarInsets.right == 0) {
-                        params.x = windowManager.getCurrentWindowMetrics().getWindowInsets().getSystemWindowInsetRight();
-                    } else
-                        params.x = 0;
-                    landscapeNavigationBarOffset = 0;
-                } else {
-                    params.x = navigationBarInsets.right;
-                    landscapeNavigationBarOffset = navigationBarInsets.right;
+            } else {
+                if (shouldResetPosition) {
+                    if (isNavigationBarPlacedOnVerticalEdge || navigationBarInsets.right == 0) {
+                        if (navigationBarInsets.right == 0) {
+                            params.x = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.displayCutout()).right;
+                        } else
+                            params.x = 0;
+                    } else {
+                        params.x = navigationBarInsets.right;
+                    }
+                    params.y = 0;
                 }
-                params.y = 0;
+                landscapeNavigationBarOffset = Math.max(navigationBarInsets.right, 0);
             }
             if (isExpanded) {
-                params.gravity = (navigationBarInsets.left > 0 ? Gravity.END : Gravity.START) | Gravity.TOP;
+                params.gravity = (navigationBarInsets.left > 0 ? Gravity.END : Gravity.START) | (navigationBarInsets.bottom > 0 ? Gravity.TOP : Gravity.BOTTOM);
             }
-            if (didOrientationChanged) {
+            if (shouldUpdateLayout) {
                 windowManager.updateViewLayout(overlayView, params);
             }
         } else {
@@ -221,7 +222,7 @@ public class WidgetController {
 
         FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
 
-        configureOverlayDimensions(buttonContainerLayoutParams, true, false);
+        configureOverlayDimensions(buttonContainerLayoutParams, true, false, false);
 
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
         buttonContainer.setTranslationY(params.y);

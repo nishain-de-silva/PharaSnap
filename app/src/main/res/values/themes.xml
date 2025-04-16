@@ -40,6 +40,7 @@
         <item name="buttonStyle">@style/Theme.PharaSnap.Button</item>
         <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/primaryYellow</item>
         <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/logo</item>
+        <item name="android:windowSplashScreenBrandingImage" tools:targetApi="s">@drawable/branding_banner</item>
         <item name="android:fontFamily">@font/primary</item>
         <item name="alertDialogTheme">@style/Theme.PharaSnap.AlertDialog</item>
 <!--        <item name="colorPrimaryVariant">@color/purple_700</item>-->

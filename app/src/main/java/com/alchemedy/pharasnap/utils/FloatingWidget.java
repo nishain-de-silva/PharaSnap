@@ -428,9 +428,9 @@ public class FloatingWidget {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             String newInsetSignature = windowManager.getMaximumWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars()).toString();
-            if(!insetSignature.equals(newInsetSignature)) {
+            if(!insetSignature.equals(newInsetSignature) || didOrientationChanged) {
                 FrameLayout.LayoutParams buttonContainerParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
-                widgetController.configureOverlayDimensions(buttonContainerParams, isWidgetExpanded, true);
+                widgetController.configureOverlayDimensions(buttonContainerParams, isWidgetExpanded, didOrientationChanged, true);
             }
             insetSignature = newInsetSignature;
         } else if (didOrientationChanged) {

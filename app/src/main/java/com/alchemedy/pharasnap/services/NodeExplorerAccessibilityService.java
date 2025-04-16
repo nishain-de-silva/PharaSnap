@@ -19,7 +19,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     FloatingWidget floatingWidget;
     private MessageHandler messageHandler;
     public static boolean isWidgetIsShowing;
-    private long previousStartTime;
 
     public void onStopWidget() {
         if (floatingWidget != null) {
@@ -39,9 +38,6 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
-        AccessibilityServiceInfo serviceInfo = getServiceInfo();
-        serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOWS_CHANGED;
-        setServiceInfo(serviceInfo);
         // when this service is created at phone-reboot or re-created by system my memory cleanup
         // it will check the current stale active state and turn it off.
         messageHandler = new MessageHandler(this);
@@ -79,21 +75,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     @Override
-    public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
-//        Log.d("info", "onAccessibilityEvent called "+AccessibilityEvent.eventTypeToString(accessibilityEvent.getEventType())+" "+accessibilityEvent.getPackageName()+" "+accessibilityEvent.getClassName() + " "+accessibilityEvent.getContentDescription());
-        if (accessibilityEvent.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            if ((SystemClock.elapsedRealtime() - previousStartTime) > 3000) {
-                AccessibilityServiceInfo serviceInfo = getServiceInfo();
-                serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOWS_CHANGED;
-                setServiceInfo(serviceInfo);
-            }
-        } else {
-            AccessibilityServiceInfo serviceInfo = getServiceInfo();
-            serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
-            setServiceInfo(serviceInfo);
-            previousStartTime = SystemClock.elapsedRealtime();
-        }
-    }
+    public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {}
 
     @Override
     public void onInterrupt() {}
