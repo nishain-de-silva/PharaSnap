@@ -81,8 +81,6 @@ public class MainActivity extends ThemeActivity {
             public Boolean onResume(int id) {
                 if (id == R.string.accessibility_requirement_description || id == R.string.accessibility_requirement_description_first_time)
                     return AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && id == R.string.overlay_requirement_description)
-                    return Settings.canDrawOverlays(MainActivity.this);
 
                 return null;
             }
@@ -92,10 +90,6 @@ public class MainActivity extends ThemeActivity {
             public boolean onButtonPress(int id) {
                 if (id == R.string.accessibility_requirement_description || id == R.string.accessibility_requirement_description_first_time) {
                     startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-                    return true;
-                }
-                if (id == R.string.overlay_requirement_description) {
-                    startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION));
                     return true;
                 }
                 return false;
@@ -123,7 +117,7 @@ public class MainActivity extends ThemeActivity {
         setContentView(R.layout.activity_main);
         walkthroughSlider = null;
         View launchButton = findViewById(R.id.launch_widget);
-        launchButton.setOnClickListener(v -> WidgetController.launchWidget(this, true, WidgetController.DISABLED_PERMISSION_UNKNOWN));
+        launchButton.setOnClickListener(v -> WidgetController.launchWidget(this, true, false));
         findViewById(R.id.troubleshhot).setOnClickListener(v -> startActivity(new Intent(this, TroubleshootActivity.class)));
         TextView versionLabel = findViewById(R.id.version_label);
         String versionText = versionLabel.getText().toString()
@@ -150,12 +144,6 @@ public class MainActivity extends ThemeActivity {
                     needToDisplayInitialWalkthrough ? "Accessibility Service Required" : "Enable Accessibility Service"
             )
                     .setButtonText(needToDisplayInitialWalkthrough ? "Grant Accessibility Access" : "Enable Accessibility", false));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this))
-            pages.add(new WalkthroughSlider.PageContent(
-                    R.string.overlay_requirement_description,
-                    "Overlay Permission Required"
-            )
-                    .setButtonText("Grant Draw Overlay Permission", false));
 
         if(needToDisplayInitialWalkthrough) {
             addTutorials(false);

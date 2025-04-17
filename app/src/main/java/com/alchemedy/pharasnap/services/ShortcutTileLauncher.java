@@ -3,9 +3,9 @@ package com.alchemedy.pharasnap.services;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
+import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
@@ -14,18 +14,18 @@ import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.utils.AccessibilityHandler;
 import com.alchemedy.pharasnap.utils.FloatingWidget;
-import com.alchemedy.pharasnap.utils.WidgetController;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
 public class ShortcutTileLauncher extends TileService {
-    public static int expectedTileState = Tile.STATE_UNAVAILABLE;
+    public static boolean resetTileState;
     @Override
     public void onTileAdded() {
         super.onTileAdded();
         Tile tile = getQsTile();
-        expectedTileState = Tile.STATE_UNAVAILABLE;
+        resetTileState = false;
         tile.setState(FloatingWidget.isWidgetIsShowing ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         tile.updateTile();
+        updateTileStatusInStorage(FloatingWidget.isWidgetIsShowing);
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
         if(!sharedPreferences.getBoolean(Constants.IS_TUTORIAL_SHOWN, false)) {
             new MessageHandler(this).sendBroadcast(new Intent(Constants.TILE_ADDED_WHILE_TUTORIAL));
@@ -35,40 +35,44 @@ public class ShortcutTileLauncher extends TileService {
     @Override
     public void onTileRemoved() {
         super.onTileRemoved();
+        updateTileStatusInStorage(false);
     }
 
 
     int tileState;
     private boolean isAccessibilityServiceRunning;
-    private boolean canSystemDraw = false;
     @Override
     public void onStartListening() {
         super.onStartListening();
         Tile tile = getQsTile();
 
         tileState = tile.getState();
-        if (expectedTileState == Tile.STATE_UNAVAILABLE) {
-            if (tileState == Tile.STATE_ACTIVE) {
-                tile.setState(Tile.STATE_INACTIVE);
-                tile.updateTile();
-            } else {
-                isAccessibilityServiceRunning = AccessibilityHandler.isAccessibilityServiceEnabled(this);
-                canSystemDraw = Settings.canDrawOverlays(this);
-                if (isAccessibilityServiceRunning && canSystemDraw) {
-                    tile.setState(Tile.STATE_ACTIVE);
-                    tile.updateTile();
-                }
-            }
+        if (tileState == Tile.STATE_ACTIVE) {
+            tile.setState(Tile.STATE_INACTIVE);
+            tile.updateTile();
+            updateTileStatusInStorage(false);
+            resetTileState = false;
         } else {
-            if (expectedTileState == Tile.STATE_INACTIVE && tileState == Tile.STATE_ACTIVE) {
-                tile.setState(Tile.STATE_INACTIVE);
-                tile.updateTile();
-            } else if (expectedTileState == Tile.STATE_ACTIVE && tileState == Tile.STATE_INACTIVE) {
+            if (resetTileState) {
+                resetTileState = false;
+                return;
+            }
+            isAccessibilityServiceRunning = AccessibilityHandler.isAccessibilityServiceEnabled(this);
+            if (isAccessibilityServiceRunning) {
                 tile.setState(Tile.STATE_ACTIVE);
+                updateTileStatusInStorage(true);
                 tile.updateTile();
             }
-            expectedTileState = Tile.STATE_UNAVAILABLE;
         }
+    }
+
+    private void updateTileStatusInStorage(boolean isActive) {
+        SharedPreferences.Editor sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE).edit();
+        if (isActive)
+            sharedPreferences.putBoolean(Constants.TILE_ACTIVE_KEY, true);
+        else
+            sharedPreferences.remove(Constants.TILE_ACTIVE_KEY);
+        sharedPreferences.apply();
     }
 
     @Override
@@ -79,9 +83,9 @@ public class ShortcutTileLauncher extends TileService {
                             .putExtra(Constants.STOP_WIDGET, true)
                             .putExtra(Constants.SKIP_NOTIFY_QUICK_TILE, true));
         } else {
-            if (!canSystemDraw || !isAccessibilityServiceRunning) {
+            if (!isAccessibilityServiceRunning) {
                 startActivityAndCollapse(new Intent(this, NoDisplayHelperActivity.class)
-                        .putExtra(Constants.KNOWN_DISABLED_PERMISSIONS_KEY, !canSystemDraw ? WidgetController.OVERLAY_PERMISSION_DISABLED : WidgetController.ACCESSIBILITY_DISABLED)
+                        .putExtra(Constants.IS_KNOWN_ACCESSIBILITY_DISABLED, true)
                         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } else {
                 startActivityAndCollapse(new Intent(this, NoDisplayHelperActivity.class)

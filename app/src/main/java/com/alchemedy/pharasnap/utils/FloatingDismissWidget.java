@@ -22,6 +22,7 @@ public class FloatingDismissWidget {
     View dismissWidgetButtonView, overlayView;
     Rect dismissButtonLocationOnScreen;
     ValueAnimator.AnimatorUpdateListener updateListener;
+    View.OnLayoutChangeListener onLayoutChangeListener;
 
     public FloatingDismissWidget(WindowManager windowManager, View overlayView, NodeExplorerAccessibilityService hostingService) {
         this.windowManager = windowManager;
@@ -58,15 +59,16 @@ public class FloatingDismissWidget {
             animator.setDuration(250);
             updateListener = newUpdateListener;
             animator.addUpdateListener(updateListener);
-
             dismissWidgetButtonView = LayoutInflater.from(hostingService).inflate(R.layout.delete_button, null);
-            dismissWidgetButtonView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            onLayoutChangeListener = new View.OnLayoutChangeListener() {
                 @Override
                 public void onLayoutChange(View view, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
                     dismissWidgetButtonView.removeOnLayoutChangeListener(this);
+                    onLayoutChangeListener = null;
                     animator.start();
                 }
-            });
+            };
+            dismissWidgetButtonView.addOnLayoutChangeListener(onLayoutChangeListener);
             dismissWidgetButtonParams = new WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.WRAP_CONTENT,
@@ -100,6 +102,7 @@ public class FloatingDismissWidget {
         );
         int initialEnableButtonYLevel = params.y;
         ValueAnimator.AnimatorUpdateListener newUpdateListener = valueAnimator -> {
+            if (dismissWidgetButtonParams == null) return;
             float amount = (float) valueAnimator.getAnimatedValue();
             dismissWidgetButtonParams.y = (int) amount;
             windowManager.updateViewLayout(dismissWidgetButtonView, dismissWidgetButtonParams);
@@ -120,6 +123,10 @@ public class FloatingDismissWidget {
             }
         };
         if (animator != null) {
+            if (onLayoutChangeListener != null) {
+                dismissWidgetButtonView.removeOnLayoutChangeListener(onLayoutChangeListener);
+                onLayoutChangeListener = null;
+            }
             animator.removeUpdateListener(updateListener);
             animator.addUpdateListener(newUpdateListener);
             updateListener = newUpdateListener;

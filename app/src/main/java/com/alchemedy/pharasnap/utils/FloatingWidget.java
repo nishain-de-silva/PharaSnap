@@ -827,8 +827,7 @@ public class FloatingWidget {
     }
 
     private void notifyStateOnQuickTile(boolean newState) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            ShortcutTileLauncher.expectedTileState = newState ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && newState != sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false)) {
             ShortcutTileLauncher.requestListeningState(hostingService, new ComponentName(hostingService, ShortcutTileLauncher.class));
         }
     }

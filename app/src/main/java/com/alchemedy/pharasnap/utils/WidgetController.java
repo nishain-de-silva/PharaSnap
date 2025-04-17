@@ -8,6 +8,7 @@ import android.content.res.Resources;
 import android.graphics.Insets;
 import android.os.Build;
 import android.provider.Settings;
+import android.util.Log;
 import android.util.Size;
 import android.view.Gravity;
 import android.view.View;
@@ -18,26 +19,28 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 import com.alchemedy.pharasnap.helper.MessageHandler;
+import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
 import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 
 public class WidgetController {
-    public static final int DISABLED_PERMISSION_UNKNOWN = 0, ACCESSIBILITY_DISABLED = 1, OVERLAY_PERMISSION_DISABLED = 2;
-    public static void launchWidget(Context context, boolean showAccessibilityPrompt, int disabledPermissions) {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && (disabledPermissions == OVERLAY_PERMISSION_DISABLED ||
-                disabledPermissions == DISABLED_PERMISSION_UNKNOWN && !Settings.canDrawOverlays(context))) {
-            Toast.makeText(context, "Please grant overlay permission and try again", Toast.LENGTH_SHORT).show();
-            context.startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION));
-        } else if (disabledPermissions == ACCESSIBILITY_DISABLED || !AccessibilityHandler.isAccessibilityServiceEnabled(context)) {
-            SharedPreferences.Editor sharedPreferencesEditor = context.getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, Context.MODE_PRIVATE).edit();
-            sharedPreferencesEditor.putBoolean(Constants.START_WIDGET_AFTER_ACCESSIBILITY_LAUNCH, true).apply();
+    public static void launchWidget(Context context, boolean showAccessibilityPrompt, boolean isKnownAccessibilityDisabled) {
+        if (isKnownAccessibilityDisabled || !AccessibilityHandler.isAccessibilityServiceEnabled(context)) {
+            NodeExplorerAccessibilityService.startWidgetAfterAccessibilityLaunch = true;
+            String enabledAccessibilityServices = Settings.Secure.getString(
+                    context.getContentResolver(),
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            );
+            if(enabledAccessibilityServices.contains(context.getPackageName())) {
+                Toast.makeText(context, "Please wait a bit....", Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (showAccessibilityPrompt)
                 new AlertDialog.Builder(context)
                         .setTitle("Grant Accessibility Access")

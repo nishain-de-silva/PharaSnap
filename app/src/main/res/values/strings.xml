@@ -18,7 +18,6 @@
         For PharaSnap to capture and copy text on the screen. It need access to Accessibility service to read text block on screen and as well identify images block are placed on the screen for image-to-text recognition. No personal data is collected and shared to third parties
     </string>
     <string name="troubleshoot_button_label">Not detecting text? try troubleshoot</string>
-    <string name="overlay_requirement_description">When using this tool a floating widget displayed over the screen. Please grant permission to draw over other apps. Don\'t worry you can stop the widget when not in use.</string>
     <string name="introduction">PharaSnap can help you copy text on the screen even on places where you don\'t have the facility directly copy text to clipboard. PharaSnap can even capture text on images without ever leaving the app</string>
     <string name="add_tile_description">To make this tool easily accessible to use it is recommended to add the quick settings shortcut in your notification panel. Open your notification panel, in the top section (quick settings panel) then tap to customize the panel and add the shortcut tile provided by this app to the active area. Drag and place it on a convenient place
         \n\nAnother way to open the widget is by long pressing the app launch icon which prompt you open the widget.

@@ -23,7 +23,7 @@ public class NoDisplayHelperActivity extends AppCompatActivity {
             WidgetController.launchWidget(
                     this,
                     false,
-                    intent.getIntExtra(Constants.KNOWN_DISABLED_PERMISSIONS_KEY, WidgetController.DISABLED_PERMISSION_UNKNOWN)
+                    intent.getBooleanExtra(Constants.IS_KNOWN_ACCESSIBILITY_DISABLED, false)
             );
         }
         finish();

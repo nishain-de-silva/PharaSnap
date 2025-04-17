@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.SystemClock;
 import android.service.quicksettings.Tile;
+import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
@@ -19,6 +20,7 @@ import com.alchemedy.pharasnap.utils.FloatingWidget;
 public class NodeExplorerAccessibilityService extends android.accessibilityservice.AccessibilityService {
     FloatingWidget floatingWidget;
     private MessageHandler messageHandler;
+    public static boolean startWidgetAfterAccessibilityLaunch = false;
 
 
     public void onStopWidget() {
@@ -26,6 +28,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             floatingWidget.releaseResources();
             floatingWidget = null;
             FloatingWidget.isWidgetIsShowing = false;
+            startWidgetAfterAccessibilityLaunch = false;
         }
     }
 
@@ -43,12 +46,11 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         // it will check the current stale active state and turn it off.
         messageHandler = new MessageHandler(this);
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            ShortcutTileLauncher.expectedTileState = Tile.STATE_INACTIVE;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false)) {
+            ShortcutTileLauncher.resetTileState = true;
             ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
-        }
-        else if (sharedPreferences.getBoolean(Constants.START_WIDGET_AFTER_ACCESSIBILITY_LAUNCH, false)) {
-            sharedPreferences.edit().remove(Constants.START_WIDGET_AFTER_ACCESSIBILITY_LAUNCH).apply();
+        }  else if (startWidgetAfterAccessibilityLaunch) {
+            startWidgetAfterAccessibilityLaunch = false;
             floatingWidget = new FloatingWidget(this, false);
         }
 
