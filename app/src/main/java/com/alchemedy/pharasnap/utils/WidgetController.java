@@ -33,14 +33,6 @@ public class WidgetController {
     public static void launchWidget(Context context, boolean showAccessibilityPrompt, boolean isKnownAccessibilityDisabled) {
         if (isKnownAccessibilityDisabled || !AccessibilityHandler.isAccessibilityServiceEnabled(context)) {
             NodeExplorerAccessibilityService.startWidgetAfterAccessibilityLaunch = true;
-            String enabledAccessibilityServices = Settings.Secure.getString(
-                    context.getContentResolver(),
-                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            );
-            if(enabledAccessibilityServices.contains(context.getPackageName())) {
-                Toast.makeText(context, "Please wait a bit....", Toast.LENGTH_SHORT).show();
-                return;
-            }
             if (showAccessibilityPrompt)
                 new AlertDialog.Builder(context)
                         .setTitle("Grant Accessibility Access")
