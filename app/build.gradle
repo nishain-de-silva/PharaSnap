@@ -12,8 +12,8 @@ android {
         applicationId "com.alchemedy.pharasnap"
         minSdk 22
         targetSdk 34
-        versionCode 16
-        versionName "1.1"
+        versionCode 18
+        versionName "1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -13,15 +13,20 @@
     <string name="accessibility_enable_alert_description">You must provide PharaSnap access to use Accessibility service to read text and image content on the screen. Go setting and select PharaSnap to enable accessibility service</string>
     <string name="text_detection_failed">Could not detect any text</string>
     <string name="list_empty_text">No entries yet! This your last 20 recent item list. When a text is identified it will be shown here</string>
-    <string name="accessibility_requirement_description">Please enable accessibility service to read and identify the positions of text elements and image elements on the screen to extract their text content. On the settings page, select this app and enable accessibility permission</string>
+    <string name="accessibility_requirement_description">
+        Please enable accessibility service to read and identify the positions of text elements and image elements on the screen to extract their text content. On the settings page, select this app and enable accessibility permission.
+        \nOn accessibility settings go to installed / Downloaded Apps > Select PharaSnap and toggle the switch \'on\' to grant accessibility service.
+    </string>
     <string name="accessibility_requirement_description_first_time">
         For PharaSnap to capture and copy text on the screen. It need access to Accessibility service to read text block on screen and as well identify images block are placed on the screen for image-to-text recognition. No personal data is collected and shared to third parties
+        \nOn accessibility settings go to installed / Downloaded Apps > Select PharaSnap and toggle the switch \'on\' to grant accessibility service.
     </string>
     <string name="troubleshoot_button_label">Not detecting text? try troubleshoot</string>
     <string name="introduction">PharaSnap can help you copy text on the screen even on places where you don\'t have the facility directly copy text to clipboard. PharaSnap can even capture text on images without ever leaving the app</string>
     <string name="add_tile_description">To make this tool easily accessible to use it is recommended to add the quick settings shortcut in your notification panel. Open your notification panel, in the top section (quick settings panel) then tap to customize the panel and add the shortcut tile provided by this app to the active area. Drag and place it on a convenient place
         \n\nAnother way to open the widget is by long pressing the app launch icon which prompt you open the widget.
     </string>
+    <string name="add_tile_requirement">Quick launching from quick settings in notification tiles is the most recommended way to launch/open this tool because it is very quicker and you don\'t switch between apps, simply slide down the notification tile panel and tap the shortcut button</string>
     <string name="capturing_modes_tutorial">When capturing text there are two modes,
         \n1) Text mode where you simply tap on text element on screen to capture (this could be button, label or multiline paragraph).
         \n\n2) Image mode uses text recognition OCR (for now only support latin characters including english) to capture text on images.
@@ -32,9 +37,10 @@
     <string name="recent_items_tutorial">You can also view your last copied items in the recent list from the floating widget itself. You can remove individual items or clear the list altogether.</string>
     <string name="developer_note">This is an app developed by single person. If love this app useful I would like to hear your feedback and thoughts.</string>
     <string name="main_menu_list">main menu list</string>
+    <string name="tile_label">Capture text</string>
     <string name="walkthrough_page_content">walkthrough_page_content</string>
-    <string name="second_troubleshooting_description">During development phase I have experienced text content some apps will not be available to extract like comment text on YouTube app. However after updating that app to latest version might resolve this issue. So if encountered a similar situation please make sure the host app in in latest version.\nIf none works check if accessibility service from app is functioning normally without failure message on accessibility settings page</string>
-    <string name="first_troubleshooting_description">Some app can request some condidential/private pages on the app like igcognito tabs on chrome to be secured and blocks capturing visual contents on the screen which prevents image to text recognition to work. Please make sure content is not placed on secured screen for example like in chrome open the link from igconito tab to normal tab</string>
+    <string name="second_troubleshooting_description">During development phase I have experienced text content some apps will not be available to extract like comment text on YouTube app. However after updating that app to latest version might resolve this issue. So if encountered a similar situation please make sure the host app in in latest version.\nIf none works restart the accessibility service by toggling on and off in accessibility settings</string>
+    <string name="first_troubleshooting_description">Some app can request some confidential/private pages on the app like igcognito tabs on chrome to be secured and blocks capturing visual contents on the screen which prevents image to text recognition to work. Please make sure content is not placed on secured screen for example like in chrome open the link from igconito tab to normal tab</string>
     <string name="second_troubleshooting_heading">Not detecting text on Normal mode ?</string>
     <string name="first_troubleshooting_heading">Not detecting text on image mode ?</string>
     <string name="troubleshooting_page_header">Troubleshooting</string>

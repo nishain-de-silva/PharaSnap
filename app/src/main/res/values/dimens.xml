@@ -7,4 +7,5 @@
     <dimen name="button_container_size">136dp</dimen>
     <dimen name="thumb_size">25dp</dimen>
     <dimen name="cursor_width">2dp</dimen>
+    <dimen name="node_capture_proximity_radius">15dp</dimen>
 </resources>

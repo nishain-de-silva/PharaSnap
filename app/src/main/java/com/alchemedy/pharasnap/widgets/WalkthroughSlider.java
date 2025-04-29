@@ -20,7 +20,7 @@ public class WalkthroughSlider extends LinearLayout {
     private ArrayList<PageContent> list = new ArrayList<>();
 
     public static abstract class EventHandler {
-        public abstract Boolean onResume(int id);
+        public abstract boolean onResume(int id);
         public abstract boolean onButtonPress(int id);
         public abstract void onComplete();
     }
@@ -94,7 +94,7 @@ public class WalkthroughSlider extends LinearLayout {
                 getDefaultButtonText()
         );
         actionButton.setOnClickListener(v -> {
-            if (!eventHandler.onButtonPress(page.contentId))
+            if (page.buttonTitle == null || !eventHandler.onButtonPress(page.contentId))
                 changePage(true, true);
         });
         addView(inflatedPage, new ViewGroup.LayoutParams(
@@ -182,12 +182,10 @@ public class WalkthroughSlider extends LinearLayout {
                 && currentIndex > -1
                 && currentIndex < list.size()
         ) {
-            Boolean canResume = eventHandler.onResume(list.get(currentIndex).contentId);
-            if (canResume == null) return;
-            if (canResume) {
+            PageContent page = list.get(currentIndex);
+            if (eventHandler.onResume(page.contentId)) {
                 changePage(true, false);
             }
         }
-
     }
 }

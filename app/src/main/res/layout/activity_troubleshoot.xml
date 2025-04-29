@@ -70,6 +70,16 @@
                 android:layout_marginTop="12dp"
                 android:textColor="@color/darkPurple"
                 android:textSize="18sp"/>
+            <Button
+                android:id="@+id/open_accessibility"
+                android:layout_width="wrap_content"
+                style="@style/Theme.PharaSnap.MainMenuButton"
+                android:layout_marginTop="12dp"
+                android:layout_height="wrap_content"
+                android:text="Open Accessibility Settings"
+                android:textSize="18sp"
+                android:textColor="@color/darkPurple"
+                />
         </LinearLayout>
     </LinearLayout>
     </ScrollView>

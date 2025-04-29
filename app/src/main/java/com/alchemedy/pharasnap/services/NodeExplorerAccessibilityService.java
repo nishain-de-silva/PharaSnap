@@ -11,6 +11,7 @@ import android.os.SystemClock;
 import android.service.quicksettings.Tile;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Toast;
 
 import com.alchemedy.pharasnap.helper.Constants;
@@ -21,7 +22,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     FloatingWidget floatingWidget;
     private MessageHandler messageHandler;
     public static boolean startWidgetAfterAccessibilityLaunch = false;
-
+    private long previousStartTime;
 
     public void onStopWidget() {
         if (floatingWidget != null) {
@@ -44,10 +45,14 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         super.onServiceConnected();
         // when this service is created at phone-reboot or re-created by system my memory cleanup
         // it will check the current stale active state and turn it off.
+        AccessibilityServiceInfo serviceInfo = getServiceInfo();
+        serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOWS_CHANGED;
+        setServiceInfo(serviceInfo);
+
         messageHandler = new MessageHandler(this);
         SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false)) {
-            ShortcutTileLauncher.resetTileState = true;
+            ShortcutTileLauncher.expectedChange = Tile.STATE_INACTIVE;
             ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
         }  else if (startWidgetAfterAccessibilityLaunch) {
             startWidgetAfterAccessibilityLaunch = false;
@@ -80,7 +85,20 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     }
 
     @Override
-    public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {}
+    public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
+        if (accessibilityEvent.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            if ((SystemClock.elapsedRealtime() - previousStartTime) > 3000) {
+                AccessibilityServiceInfo serviceInfo = getServiceInfo();
+                serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOWS_CHANGED;
+                setServiceInfo(serviceInfo);
+            }
+        } else {
+            AccessibilityServiceInfo serviceInfo = getServiceInfo();
+            serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED|AccessibilityEvent.TYPE_WINDOWS_CHANGED;
+            setServiceInfo(serviceInfo);
+            previousStartTime = SystemClock.elapsedRealtime();
+        }
+    }
 
     @Override
     public void onInterrupt() {}

@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -13,7 +12,7 @@ import android.provider.Settings;
 import android.view.View;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 
 import com.alchemedy.pharasnap.BuildConfig;
 import com.alchemedy.pharasnap.R;
@@ -78,11 +77,11 @@ public class MainActivity extends ThemeActivity {
         walkthroughSlider = findViewById(R.id.walkthrough_slider);
         walkthroughSlider.start(pages, new WalkthroughSlider.EventHandler() {
             @Override
-            public Boolean onResume(int id) {
+            public boolean onResume(int id) {
                 if (id == R.string.accessibility_requirement_description || id == R.string.accessibility_requirement_description_first_time)
                     return AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this);
 
-                return null;
+                return false;
             }
 
             @SuppressLint("InlinedApi")
@@ -90,6 +89,18 @@ public class MainActivity extends ThemeActivity {
             public boolean onButtonPress(int id) {
                 if (id == R.string.accessibility_requirement_description || id == R.string.accessibility_requirement_description_first_time) {
                     startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                    return true;
+                }
+                if (id == R.string.add_tile_description) {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("Are you sure ?")
+                            .setMessage(R.string.add_tile_requirement)
+                            .setPositiveButton("Skip anyway", (dialogInterface, i) -> {
+                                walkthroughSlider.changePage(true, true);
+                                dialogInterface.dismiss();
+                            })
+                            .setNegativeButton("No wait", (dialogInterface, i) -> dialogInterface.dismiss())
+                            .show();
                     return true;
                 }
                 return false;

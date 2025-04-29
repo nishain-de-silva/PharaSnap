@@ -16,6 +16,7 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ public class CustomOverlayView extends FrameLayout {
     private int highlightFillColor = Color.parseColor("#6430C5FF");
     private int highlightStrokeColor = Color.parseColor("#30C5FF");
     private final int PRIMARY_STROKE_WIDTH = 3;
+//    private Rect dot = null;
 
     private OnTapListener onTapListener;
     private OnDismissListener onDismissListener;
@@ -112,7 +114,14 @@ public class CustomOverlayView extends FrameLayout {
         });
     }
 
-    public void addNewBoundingBox(Rect boundingBox, ArrayList<String> capturedTexts, String addedText) {
+    public void drawDebugDot(int x, int y) {
+        int radius = getResources().getDimensionPixelSize(R.dimen.node_capture_proximity_radius);
+        int[] offset = new int[2];
+        getLocationOnScreen(offset);
+//        dot = new Rect(x - offset[0] - radius, y - offset[1] - radius, x - offset[0] + radius, y - offset[1] + radius);
+        invalidate();
+    }
+    public boolean addNewBoundingBox(Rect boundingBox, ArrayList<String> capturedTexts, String addedText) {
         if (selections == null) selections = new ArrayList<>();
         int[] offset = new int[2];
         getLocationOnScreen(offset);
@@ -120,13 +129,23 @@ public class CustomOverlayView extends FrameLayout {
         RectF animatingBoundingBox = new RectF(boundingBox);
         for (int i = 0; i < selections.size(); i++) {
             RectF selection = selections.get(i);
-            if (selection.top >= animatingBoundingBox.top && selection.left >= animatingBoundingBox.left
-                    && selection.bottom <= animatingBoundingBox.bottom && selection.right <= animatingBoundingBox.right) {
+            // if the given bounding box is already existing remove it and return adding selection is un-necessary.
+            if (selection.top == animatingBoundingBox.top && selection.bottom == animatingBoundingBox.bottom
+            && selection.left == animatingBoundingBox.left && selection.right == animatingBoundingBox.right) {
+                selections.remove(i);
+                capturedTexts.remove(i);
+                return false;
+            }
+
+            // checking if the given bounding box is overlapping with any other bounding boxes
+            if (animatingBoundingBox.contains(selection) || animatingBoundingBox.intersect(selection)) {
                 selections.remove(i);
                 capturedTexts.remove(i);
             }
         }
 
+        // add the new selection bounding box in ordered index in natural reading order of the screen
+        // (top-bottom - first priority and left-right - second priority)
         if (selections.size() > 0) {
             int index;
             for (index = 0; index < selections.size(); index++) {
@@ -159,6 +178,7 @@ public class CustomOverlayView extends FrameLayout {
             invalidate();
         });
         valueAnimator.start();
+        return true;
     }
     public void clearAllSelections() {
         if (selections == null) return;
@@ -198,5 +218,10 @@ public class CustomOverlayView extends FrameLayout {
                 canvas.drawRoundRect(boundingBox, 10, 10, paint);
             }
         }
+//        if (dot != null) {
+//            paint.setColor(Color.RED);
+//            paint.setStyle(Paint.Style.FILL);
+//            canvas.drawRect(dot, paint);
+//        }
     }
 }

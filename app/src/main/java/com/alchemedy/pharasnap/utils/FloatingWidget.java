@@ -42,6 +42,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -77,6 +78,7 @@ import java.util.List;
 
 public class FloatingWidget {
     public static boolean isWidgetIsShowing;
+    private static int NODE_PROXIMITY_THRESHOLD;
     final private NodeExplorerAccessibilityService hostingService;
     private WindowManager windowManager;
     private View overlayView;
@@ -87,8 +89,8 @@ public class FloatingWidget {
     private Modal modal;
     private BroadcastReceiver systemNavigationButtonTapListener = null;
     private boolean isTextRecognitionEnabled = false;
-    private AccessibilityNodeInfo selectedNode;
-    private int minArea;
+    private AccessibilityNodeInfo selectedNode, closeProximitySelectedNode;
+    private int minArea, minProximityDistance;
     private MediaProjection mediaProjection;
     private MediaProjectionManager mediaProjectionManager;
     private Handler mediaProjectionIdleHandler = null;
@@ -133,11 +135,15 @@ public class FloatingWidget {
                 textHint.changeText(hostingService.getString(R.string.text_detection_failed_in_text_mode));
             return;
         }
+
         View copyIndicator = overlayView.findViewById(R.id.text_copy_indicator);
-        if (copyIndicator.getVisibility() != View.VISIBLE)
-            copyIndicator.setVisibility(View.VISIBLE);
-        rootOverlay.addNewBoundingBox(bound, collectedTexts, text);
-        textHint.changeText("Text block added. Tap here to edit selection. Tap on selection block again to remove");
+        if (rootOverlay.addNewBoundingBox(bound, collectedTexts, text)) {
+            if (copyIndicator.getVisibility() != View.VISIBLE)
+                copyIndicator.setVisibility(View.VISIBLE);
+
+            textHint.changeText("Text block added. Tap here to edit selection. Tap on selection block again to remove");
+        } else if (collectedTexts.size() == 0)
+            copyIndicator.setVisibility(View.GONE);
     }
 
     void saveTextToStorageIfNeeded(@Nullable String textToStore) {
@@ -454,6 +460,7 @@ public class FloatingWidget {
         modal = new Modal(overlayView);
 
         currentOrientation = hostingService.getResources().getConfiguration().orientation;
+        NODE_PROXIMITY_THRESHOLD = hostingService.getResources().getDimensionPixelSize(R.dimen.node_capture_proximity_radius);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
             insetSignature = navigationBarInset.toString();
@@ -546,6 +553,7 @@ public class FloatingWidget {
                     textHint.changeTextAndNotify("Sorry, we are still busy looking for text element you tapped previously");
                     return;
                 }
+//                rootOverlay.drawDebugDot((int) tappedCoordinate.x, (int) tappedCoordinate.y);
                 int removedIndex = rootOverlay.removeSelection(tappedCoordinate.x, tappedCoordinate.y);
                 if (removedIndex != -1) {
                     collectedTexts.remove(removedIndex);
@@ -635,35 +643,38 @@ public class FloatingWidget {
 
         Bitmap croppedImage = Bitmap.createBitmap(screenBitmap, bounds.left, bounds.top, bounds.width(), bounds.height());
         setIsProcessing(true);
-//            debugImage.setImageBitmap(croppedImage);
         recognizer.process(
                         InputImage.fromBitmap(croppedImage, 0)
                 )
                 .addOnSuccessListener(result -> {
                     List<Text.TextBlock> textBlocks = result.getTextBlocks();
-                    Rect textBoundingBox = null;
-                    String tappedText = "";
-                    List<Pair<Rect, String>> filteredCandidates = new ArrayList<>();
+                    Pair<Rect, String> selectedCandidate = null;
+                    Pair<Rect, String> closeProximityCandidate = null;
+                    int minProximityDistance = Integer.MAX_VALUE;
                     for (Text.TextBlock block: textBlocks) {
                         Rect trialBoundingBox = block.getBoundingBox();
-                        if (trialBoundingBox != null && trialBoundingBox.contains(tappedCoordinateX - bounds.left, tappedCoordinateY - bounds.top)) {
-                            trialBoundingBox.offset(bounds.left, bounds.top);
-                            filteredCandidates.add(new Pair<>(trialBoundingBox, block.getText()));
+                        if (trialBoundingBox != null) {
+                            if (trialBoundingBox.contains(tappedCoordinateX - bounds.left, tappedCoordinateY - bounds.top)) {
+                                trialBoundingBox.offset(bounds.left, bounds.top);
+                                selectedCandidate = new Pair<>(trialBoundingBox, block.getText());
+                            } else {
+                                int proximity = getNodeProximityToCoordinate(trialBoundingBox, tappedCoordinateX - bounds.left, tappedCoordinateY - bounds.top);
+                                if (proximity <= NODE_PROXIMITY_THRESHOLD && proximity < minProximityDistance) {
+                                    minProximityDistance = proximity;
+                                    trialBoundingBox.offset(bounds.left, bounds.top);
+                                    closeProximityCandidate = new Pair<>(trialBoundingBox, block.getText());
+                                }
+                            }
                         }
                     }
 
-                    int minArea = Integer.MAX_VALUE;
-                    for (Pair<Rect, String> value: filteredCandidates) {
-                        int area = value.first.width() * value.first.height();
-                        if (area < minArea) {
-                            minArea = area;
-                            textBoundingBox = value.first;
-                            tappedText = value.second;
-                        }
-                    }
-                    if (textBoundingBox != null) {
-                        showResult(textBoundingBox, tappedText);
+                    if (selectedCandidate != null) {
+                        showResult(selectedCandidate.first, selectedCandidate.second);
                     } else {
+                        if (closeProximityCandidate != null) {
+                            showResult(closeProximityCandidate.first, closeProximityCandidate.second);
+                            return;
+                        }
                         List<Text.TextBlock> blocks = result.getTextBlocks();
                         Rect maximumBound = new Rect(Integer.MAX_VALUE, Integer.MAX_VALUE, -1, -1);
                         if(blocks.size() > 0) {
@@ -828,8 +839,19 @@ public class FloatingWidget {
 
     private void notifyStateOnQuickTile(boolean newState) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && newState != sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false)) {
+            ShortcutTileLauncher.expectedChange = newState ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE;
             ShortcutTileLauncher.requestListeningState(hostingService, new ComponentName(hostingService, ShortcutTileLauncher.class));
         }
+    }
+
+    private int getNodeProximityToCoordinate(Rect nodeBound, int coordinateX, int coordinateY) {
+        if (nodeBound.left <= coordinateX && nodeBound.right >= coordinateX) {
+            return nodeBound.top > coordinateY ? nodeBound.top - coordinateY : coordinateY - nodeBound.bottom;
+        }
+        if (nodeBound.top <= coordinateY && nodeBound.bottom >= coordinateY) {
+            return nodeBound.right < coordinateX ? coordinateX - nodeBound.right : nodeBound.left - coordinateX;
+        }
+        return NODE_PROXIMITY_THRESHOLD + 1;
     }
 
     private void isInsideElement(AccessibilityNodeInfo node, int coordinateX, int coordinateY) {
@@ -846,9 +868,25 @@ public class FloatingWidget {
             for (int i = 0; i < node.getChildCount(); i++) {
                 isInsideElement(node.getChild(i), coordinateX, coordinateY);
             }
-        } else if ((nodeBound.top == nodeBound.bottom)) {
-            for (int i = 0; i < node.getChildCount(); i++) {
-                isInsideElement(node.getChild(i), coordinateX, coordinateY);
+        } else {
+            if ((nodeBound.top == nodeBound.bottom) || (nodeBound.left == nodeBound.right)) {
+                for (int i = 0; i < node.getChildCount(); i++) {
+                    isInsideElement(node.getChild(i), coordinateX, coordinateY);
+                }
+            } else if (!isTextRecognitionEnabled) {
+                int proximity = getNodeProximityToCoordinate(nodeBound, coordinateX, coordinateY);
+                if(proximity < NODE_PROXIMITY_THRESHOLD && node.isVisibleToUser()) {
+                    if (proximity <= minProximityDistance) {
+                        if (!getText(node).isEmpty()) {
+                            closeProximitySelectedNode = node;
+                            minProximityDistance = proximity;
+                        }
+
+                        for (int i = 0; i < node.getChildCount(); i++) {
+                            isInsideElement(node.getChild(i), coordinateX, coordinateY);
+                        }
+                    }
+                }
             }
         }
     }
@@ -917,14 +955,20 @@ public class FloatingWidget {
         isAccessibilityServiceBusy = true;
         new Thread(() -> {
             selectedNode = null;
+            closeProximitySelectedNode = null;
             minArea = Integer.MAX_VALUE;
+            minProximityDistance = Integer.MAX_VALUE;
             AccessibilityNodeInfo root = hostingService.getRootInActiveWindow();
 //            freeSearch(root);
             isInsideElement(root, (int) x, (int) y);
             String extractedText = !shouldRetrieveText || selectedNode == null ? "" : getText(selectedNode).trim();
             Rect bounds = new Rect();
             NodeResult result;
-            if (selectedNode != null) {
+            if (shouldRetrieveText && extractedText.isEmpty() && closeProximitySelectedNode != null) {
+                closeProximitySelectedNode.getBoundsInScreen(bounds);
+                extractedText = getText(closeProximitySelectedNode).trim();
+                result = new NodeResult(bounds, extractedText);
+            } else if (selectedNode != null) {
                 selectedNode.getBoundsInScreen(bounds);
                 result = new NodeResult(bounds, extractedText);
             } else {
