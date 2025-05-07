@@ -118,7 +118,7 @@ public class FloatingDismissWidget {
                 dismissWidgetButtonParams = null;
                 dismissButtonLocationOnScreen = null;
                 if(shouldStopWidget) {
-                    hostingService.onStopWidget();
+                    hostingService.onStopWidget(true);
                 }
             }
         };

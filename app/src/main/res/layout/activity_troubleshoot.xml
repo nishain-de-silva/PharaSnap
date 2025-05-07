@@ -27,7 +27,6 @@
             android:text="@string/troubleshooting_page_header"
             android:layout_marginStart="12dp"
             android:layout_gravity="center"
-            android:textColor="@color/darkPurple"
             android:textSize="20sp"/>
     </LinearLayout>
     <ScrollView
@@ -46,39 +45,32 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/first_troubleshooting_heading"
-                android:textColor="@color/darkPurple"
                 android:textStyle="bold"
-                android:textSize="18sp"/>
+                />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/first_troubleshooting_description"
                 android:layout_marginVertical="12dp"
-                android:textColor="@color/darkPurple"
-                android:textSize="18sp"/>
+                />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/second_troubleshooting_heading"
-                android:textColor="@color/darkPurple"
                 android:textStyle="bold"
-                android:textSize="18sp"/>
+                />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/second_troubleshooting_description"
                 android:layout_marginTop="12dp"
-                android:textColor="@color/darkPurple"
-                android:textSize="18sp"/>
+                />
             <Button
                 android:id="@+id/open_accessibility"
                 android:layout_width="wrap_content"
-                style="@style/Theme.PharaSnap.MainMenuButton"
                 android:layout_marginTop="12dp"
                 android:layout_height="wrap_content"
                 android:text="Open Accessibility Settings"
-                android:textSize="18sp"
-                android:textColor="@color/darkPurple"
                 />
         </LinearLayout>
     </LinearLayout>
@@ -93,7 +85,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:textColor="@color/darkPurple"
+                android:textSize="14sp"
                 android:text="Version x.x\nDeveloped by Alchemedy"
                 android:layout_margin="12dp" />
         </LinearLayout>

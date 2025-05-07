@@ -129,11 +129,21 @@ public class MainActivity extends ThemeActivity {
         walkthroughSlider = null;
         View launchButton = findViewById(R.id.launch_widget);
         launchButton.setOnClickListener(v -> WidgetController.launchWidget(this, true, false));
-        findViewById(R.id.troubleshhot).setOnClickListener(v -> startActivity(new Intent(this, TroubleshootActivity.class)));
-        TextView versionLabel = findViewById(R.id.version_label);
-        String versionText = versionLabel.getText().toString()
-                .replace("x.x", String.format("%s%s", BuildConfig.VERSION_NAME, BuildConfig.DEBUG ? " (Dev)" : ""));
-        versionLabel.setText(versionText);
+        findViewById(R.id.troubleshoot).setOnClickListener(v -> startActivity(new Intent(this, TroubleshootActivity.class)));
+        findViewById(R.id.preferences).setOnClickListener(v -> {
+            if (AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this))
+                startActivity(new Intent(this, PreferenceActivity.class));
+            else
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("Grant Accessibility Access")
+                        .setMessage(R.string.accessibility_enable_alert_description)
+                        .setPositiveButton("Grant Access", (dialogInterface, i) -> {
+                            MainActivity.this.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                            dialogInterface.dismiss();
+                        })
+                        .setNegativeButton("Cancel", (dialogInterface, i) -> dialogInterface.dismiss())
+                        .show();
+        });
         findViewById(R.id.restart_tutorial).setOnClickListener(v -> {
             addTutorials(true);
             showWalkthroughSlider();

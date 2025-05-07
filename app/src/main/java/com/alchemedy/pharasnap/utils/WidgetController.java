@@ -8,7 +8,6 @@ import android.content.res.Resources;
 import android.graphics.Insets;
 import android.os.Build;
 import android.provider.Settings;
-import android.util.Log;
 import android.util.Size;
 import android.view.Gravity;
 import android.view.View;
@@ -25,6 +24,7 @@ import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 import com.alchemedy.pharasnap.helper.MessageHandler;
+import com.alchemedy.pharasnap.helper.WidgetLocationCoordinate;
 import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
 import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
@@ -86,7 +86,7 @@ public class WidgetController {
         rootOverlay = overlayView.findViewById(R.id.rootOverlay);
     }
 
-    public void prepareInitialState(boolean shouldExpand) {
+    public void prepareInitialState(boolean shouldExpand, WidgetLocationCoordinate widgetLocationCoordinate) {
         if (!shouldExpand)
             overlayView.findViewById(R.id.text_hint).setVisibility(View.GONE);
         enableButton.setImageResource(shouldExpand ? R.drawable.collapse : R.drawable.copy);
@@ -134,16 +134,35 @@ public class WidgetController {
             buttonContainerLayoutParams.width = buttonContainerSize.getWidth();
             configureOverlayDimensions(buttonContainerLayoutParams, true, false, false);
             buttonContainer.setLayoutParams(buttonContainerLayoutParams);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // if initially if on landscape while navigation bar is on right side
-            Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
-            if (navigationBarInset.right > 0) {
-                landscapeNavigationBarOffset = navigationBarInset.right;
-                params.x = landscapeNavigationBarOffset;
+            buttonContainer.setTranslationX(-widgetLocationCoordinate.x);
+            buttonContainer.setTranslationY(widgetLocationCoordinate.y);
+        } else {
+            params.y = widgetLocationCoordinate.y;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // if initially if on landscape while navigation bar is on right side
+                Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
+                if (navigationBarInset.right > 0) {
+                    landscapeNavigationBarOffset = navigationBarInset.right;
+                    params.x = landscapeNavigationBarOffset;
+                }
             }
+            params.x += widgetLocationCoordinate.x;
         }
     }
 
+    public void saveWidgetLocation(SharedPreferences sharedPreferences) {
+        WidgetLocationCoordinate widgetLocation;
+        if (enableButton.isExpanded) {
+            widgetLocation = new WidgetLocationCoordinate((int) -buttonContainer.getTranslationX(), (int) buttonContainer.getTranslationY(), context);
+        } else {
+            widgetLocation = new WidgetLocationCoordinate(params.x - landscapeNavigationBarOffset, params.y, context);
+        }
+        if (widgetLocation.isSameAsDefault()) {
+            sharedPreferences.edit().remove(Constants.WIDGET_LAST_LOCATION_INFO).apply();
+        } else {
+            sharedPreferences.edit().putString(Constants.WIDGET_LAST_LOCATION_INFO, widgetLocation.toJSONString()).apply();
+        }
+    }
     public void configureOverlayDimensions(FrameLayout.LayoutParams buttonContainerParams, boolean isExpanded, boolean shouldResetPosition, boolean shouldUpdateLayout) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Insets navigationBarInsets = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());

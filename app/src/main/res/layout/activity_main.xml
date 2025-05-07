@@ -20,16 +20,12 @@
             android:layout_marginBottom="20dp"
             android:text="@string/app_name"
             android:layout_gravity="center"
-            android:textColor="@color/darkPurple"
             android:textSize="30sp"/>
         <Button
             android:id="@+id/launch_widget"
             android:layout_width="wrap_content"
-            style="@style/Theme.PharaSnap.MainMenuButton"
             android:layout_height="wrap_content"
             android:text="Start widget"
-            android:textSize="18sp"
-            android:textColor="@color/darkPurple"
             />
         <View
             android:layout_width="match_parent"
@@ -40,11 +36,21 @@
         <Button
             android:id="@+id/restart_tutorial"
             android:layout_width="wrap_content"
-            style="@style/Theme.PharaSnap.MainMenuButton"
             android:layout_height="wrap_content"
             android:text="Restart Tutorial"
-            android:textSize="18sp"
-            android:textColor="@color/darkPurple"
+            />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:layout_marginVertical="12dp"
+            android:background="@color/darkPurple"
+            android:layout_marginTop="12dp"
+            />
+        <Button
+            android:id="@+id/preferences"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Preferences"
             />
         <View
             android:layout_width="match_parent"
@@ -56,19 +62,15 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:textColor="@color/darkPurple"
             android:textSize="15sp"
             android:text="@string/troubleshoot_button_label"
             android:layout_marginVertical="10dp"
             />
         <Button
-            android:id="@+id/troubleshhot"
+            android:id="@+id/troubleshoot"
             android:layout_width="wrap_content"
-            style="@style/Theme.PharaSnap.MainMenuButton"
             android:layout_height="wrap_content"
             android:text="Troubleshoot"
-            android:textSize="18sp"
-            android:textColor="@color/darkPurple"
             />
         </LinearLayout>
     <LinearLayout
@@ -80,7 +82,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textColor="@color/darkPurple"
                 android:textSize="15sp"
                 android:text="@string/developer_note"
                 android:layout_marginBottom="12dp"
@@ -101,7 +102,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:textColor="@color/darkPurple"
+                android:textSize="14sp"
                 android:text="Version x.x\nDeveloped by Alchemedy"
                 android:layout_margin="12dp" />
         </LinearLayout>

@@ -60,6 +60,7 @@
                 android:layout_width="0dp"
                 android:text="Well done on adding the shortcut!"
                 android:gravity="end"
+                android:textSize="14sp"
                 android:layout_weight="1"
                 android:layout_marginEnd="12dp"
                 android:textColor="#0D203B" />

@@ -19,6 +19,7 @@
     <style name="Theme.PharaSnap.WalkthroughButton" parent="@android:style/Widget.Button">
         <item name="android:background">@drawable/button_background_blue</item>
         <item name="android:paddingStart">20dp</item>
+        <item name="android:textSize">15sp</item>
         <item name="android:paddingEnd">20dp</item>
         <item name="android:paddingTop">10dp</item>
         <item name="android:paddingBottom">10dp</item>
@@ -30,6 +31,8 @@
         <item name="android:textStyle">bold</item>
     </style>
     <style name="Theme.PharaSnap.AlertDialog" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+        <item name="android:textSize">@null</item>
+        <item name="android:textColor">?android:textColorPrimary</item>
         <item name="buttonBarButtonStyle">@style/Theme.PharaSnap.AlertDialogButton</item>
     </style>
     <style name="Theme.PharaSnap" parent="Theme.AppCompat.DayNight.NoActionBar">
@@ -37,7 +40,7 @@
 <!--        <item name="colorPrimary">@color/purple_500</item>-->
 <!--        <item name="font">@font/primary</item>-->
         <item name="fontFamily">@font/primary</item>
-        <item name="buttonStyle">@style/Theme.PharaSnap.Button</item>
+        <item name="buttonStyle">@style/Theme.PharaSnap.MainMenuButton</item>
         <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/primaryYellow</item>
         <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/logo</item>
         <item name="android:windowSplashScreenBrandingImage" tools:targetApi="s">@drawable/branding_banner</item>
@@ -59,5 +62,9 @@
     </style>
     <style name="Theme.PharaSnap.EditTextModal" parent="Theme.PharaSnap.TransparentActivity">
         <item name="android:fontFamily">@font/primary</item>
+    </style>
+    <style name="Theme.PharaSnap.Activity" parent="Theme.PharaSnap">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/darkPurple</item>
     </style>
 </resources>

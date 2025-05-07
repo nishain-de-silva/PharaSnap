@@ -56,6 +56,7 @@ import com.alchemedy.pharasnap.helper.EditedTextEntry;
 import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.helper.ScreenInfo;
 import com.alchemedy.pharasnap.helper.TextChangedListener;
+import com.alchemedy.pharasnap.helper.WidgetLocationCoordinate;
 import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
 import com.alchemedy.pharasnap.services.ShortcutTileLauncher;
 import com.alchemedy.pharasnap.widgets.CustomOverlayView;
@@ -71,6 +72,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -505,14 +507,25 @@ public class FloatingWidget {
             }
         }
         configureEnableButton(params);
+        String lastLocationInfoJSONString = sharedPreferences.getString(Constants.WIDGET_LAST_LOCATION_INFO, null);
+        WidgetLocationCoordinate widgetLocationCoordinate;
+        try {
+            widgetLocationCoordinate = new WidgetLocationCoordinate(lastLocationInfoJSONString, hostingService);
+            if (lastLocationInfoJSONString != null && widgetLocationCoordinate.isSameAsDefault())
+                sharedPreferences.edit().remove(Constants.WIDGET_LAST_LOCATION_INFO).apply();
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
         widgetController = new WidgetController(hostingService, windowManager, params, overlayView);
         params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
         if (shouldExpand) {
             toggleListenToSystemBroadcastToCollapseWidget(true);
             isWidgetExpanded = true;
-            widgetController.prepareInitialState(true);
-        } else
-            widgetController.prepareInitialState(false);
+            widgetController.prepareInitialState(true, widgetLocationCoordinate);
+        } else {
+            widgetController.prepareInitialState(false, widgetLocationCoordinate);
+        }
+
         // Add the overlay view
         windowManager.addView(overlayView, params);
         // Find the button in the overlay
@@ -914,12 +927,14 @@ public class FloatingWidget {
         }
     }
 
-    public void releaseResources() {
+    public void releaseResources(boolean skipResetWidgetLocation) {
         if (systemNavigationButtonTapListener != null)
             hostingService.unregisterReceiver(systemNavigationButtonTapListener);
         hostingService.unregisterReceiver(configurationChangeReceiver);
         messageHandler.clearAllExcept(Constants.ACCESSIBILITY_SERVICE);
         floatingDismissWidget.clearResource();
+        if (!skipResetWidgetLocation)
+            widgetController.saveWidgetLocation(sharedPreferences);
         windowManager.removeView(overlayView);
         overlayView = null;
 
@@ -936,7 +951,7 @@ public class FloatingWidget {
             notifyStateOnQuickTile(false);
     }
     private void onStopWidget() {
-        hostingService.onStopWidget();
+        hostingService.onStopWidget(false);
     }
 
     static class NodeResult {
