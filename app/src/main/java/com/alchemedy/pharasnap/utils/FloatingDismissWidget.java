@@ -91,7 +91,7 @@ public class FloatingDismissWidget {
         }
     }
 
-    public void onGestureReleased(EnableButton enableButton, WindowManager.LayoutParams params) {
+    public boolean onGestureReleased(EnableButton enableButton, WindowManager.LayoutParams params) {
         int[] enableButtonLocation = new int[2];
         enableButton.getLocationOnScreen(enableButtonLocation);
         boolean shouldStopWidget = dismissButtonLocationOnScreen != null && (
@@ -118,7 +118,7 @@ public class FloatingDismissWidget {
                 dismissWidgetButtonParams = null;
                 dismissButtonLocationOnScreen = null;
                 if(shouldStopWidget) {
-                    hostingService.onStopWidget(true);
+                    hostingService.onStopWidget();
                 }
             }
         };
@@ -139,5 +139,6 @@ public class FloatingDismissWidget {
             animator.addUpdateListener(updateListener);
             animator.start();
         }
+        return shouldStopWidget;
     }
 }

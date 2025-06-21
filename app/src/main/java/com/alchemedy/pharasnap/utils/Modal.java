@@ -26,12 +26,11 @@ public class Modal {
 
     static void handleDefaultClose(ViewGroup modalWindow) {
         View container = modalWindow.findViewById(R.id.modal_container);
-        ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
+        ValueAnimator animator = ValueAnimator.ofFloat(0, container.getHeight());
         animator.addUpdateListener(valueAnimator -> {
-            float fraction = valueAnimator.getAnimatedFraction();
-            container.setScaleX(1 - fraction);
-            container.setScaleY(1 - fraction);
-            if (fraction == 1) {
+            float amount = (float) valueAnimator.getAnimatedValue();
+            container.setTranslationY(amount);
+            if (valueAnimator.getAnimatedFraction() == 1) {
                 modalWindow.setVisibility(View.GONE);
             }
         });
@@ -51,7 +50,8 @@ public class Modal {
 
     public enum ModalType {
         EDIT_SELECTION,
-        ENTRY_LIST
+        ENTRY_LIST,
+        SETTINGS
     }
 
     public void closeModal() {
@@ -85,13 +85,17 @@ public class Modal {
     private int getHeadingTextId(ModalType modalType) {
         if (modalType == ModalType.EDIT_SELECTION)
             return R.string.text_selection_modal_title;
-        return R.string.entry_list_modal_title;
+        if (modalType == ModalType.ENTRY_LIST)
+            return R.string.entry_list_modal_title;
+        return R.string.settings_modal_title;
     }
 
     private int getContentLayoutId(ModalType modalType) {
         if (modalType == ModalType.EDIT_SELECTION)
             return R.layout.edit_text_selection;
-        return R.layout.list_window;
+        if (modalType == ModalType.ENTRY_LIST)
+            return R.layout.list_window;
+        return R.layout.settings_modal;
     }
 
 
@@ -112,12 +116,17 @@ public class Modal {
         content.addView(inflatedContent);
         View container = modalRootWindow.findViewById(R.id.modal_container);
         if(modalRootWindow.getVisibility() == View.GONE) {
-            ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
+            container.measure(
+                    View.MeasureSpec.makeMeasureSpec(overlayView.getWidth(), View.MeasureSpec.AT_MOST),
+                    View.MeasureSpec.makeMeasureSpec(overlayView.getHeight(), View.MeasureSpec.AT_MOST)
+            );
+
+
+            ValueAnimator animator = ValueAnimator.ofFloat(container.getMeasuredHeight(), 0);
             animator.addUpdateListener(valueAnimator -> {
-                float fraction = valueAnimator.getAnimatedFraction();
-                container.setScaleX(fraction);
-                container.setScaleY(fraction);
-                if (fraction == 1)
+                float amount = (float) valueAnimator.getAnimatedValue();
+                container.setTranslationY(amount);
+                if (valueAnimator.getAnimatedFraction() == 1)
                     modalCallback.onOpened(inflatedContent, false);
 
             });

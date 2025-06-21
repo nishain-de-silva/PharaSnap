@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.alchemedy.pharasnap.R;
+import com.alchemedy.pharasnap.utils.FloatingWidget;
 
 public class TextHint extends androidx.appcompat.widget.AppCompatTextView {
     private int visibility = VISIBLE;
@@ -56,12 +57,11 @@ public class TextHint extends androidx.appcompat.widget.AppCompatTextView {
         parent.setVisibility(newVisibility);
     }
 
-    public void changeMode(boolean isImageRecognitionMode) {
-        if (isImageRecognitionMode) {
-            changeText("Image mode. Tap the text on the image to capture");
-        } else  {
+    public void changeMode(int newMode) {
+        if (newMode == FloatingWidget.Mode.TEXT)
             changeText(getContext().getText(R.string.text_hint_default));
-        }
+        else
+            changeText("Picture mode. Tap on an image to capture cropped image from the screen");
     }
 
     public void setOnTapListener(OnTapListener onTapListener) {

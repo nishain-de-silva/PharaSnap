@@ -8,6 +8,7 @@ import android.graphics.Path;
 import android.graphics.Rect;
 import android.text.Layout;
 import android.util.AttributeSet;
+import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -18,6 +19,8 @@ import androidx.core.content.ContextCompat;
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.Coordinate;
 import com.alchemedy.pharasnap.helper.CoordinateF;
+
+import java.util.ArrayList;
 
 public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompatTextView {
     CursorPoint startCursor, endCursor;
@@ -45,6 +48,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
     }
 
     Layout layout;
+    Pair<Integer, Integer>[] wordSnapLocations;
     Coordinate paddingInset;
     enum CursorSelectionMode {
         NOT_SELECTED,
@@ -56,17 +60,32 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
         CoordinateF cursorCoordinate;
         CoordinateF downCursorCoordinate;
         int lineIndex;
+        @Nullable Pair<Integer, Integer> associatedWordSpan;
         int cursorIndex;
 
         float lineHeight;
         Rect cursorThumbRect;
 
         CursorPoint(int offset, int lineIndex) {
-            update(offset, lineIndex);
+            updateInternal(offset, lineIndex, true);
         }
 
         void update(int offset, int lineIndex) {
+            updateInternal(offset, lineIndex, true);
+        }
+        private void updateInternal(int offset, int lineIndex, boolean shouldRescanAssociatedWord) {
             float positionX = layout.getPrimaryHorizontal(offset);
+            associatedWordSpan = null;
+            if (shouldRescanAssociatedWord) {
+                for (int i = 0; i < wordSnapLocations.length; i++) {
+                    if (offset < wordSnapLocations[i].first)
+                        break;
+                    if (offset <= wordSnapLocations[i].second) {
+                        associatedWordSpan = wordSnapLocations[i];
+                        break;
+                    }
+                }
+            }
             Rect bounds = new Rect();
             layout.getLineBounds(lineIndex, bounds);
             bounds.offset(paddingInset.x, paddingInset.y);
@@ -85,6 +104,10 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
             );
         }
 
+        void snapToIndex(int index) {
+            updateInternal(index, lineIndex, false);
+        }
+
         void recordDownCoordinate() {
             downCursorCoordinate = cursorCoordinate;
         }
@@ -92,26 +115,34 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
 
     void drawTextSelectionPolygon() {
         float curvature = lineSpacingExtra;
-        Rect[] lineBounds = new Rect[endCursor.lineIndex + 1 - startCursor.lineIndex];
+        int startLineIndex = startCursor.associatedWordSpan == null ? startCursor.lineIndex : layout.getLineForOffset(startCursor.associatedWordSpan.first);
+        int endLineIndex = endCursor.associatedWordSpan == null ? endCursor.lineIndex : layout.getLineForOffset(endCursor.associatedWordSpan.second);
+        Rect[] lineBounds = new Rect[endLineIndex + 1 - startLineIndex];
         selectedTextPath = new Path();
 
         for (int i = 0; i < lineBounds.length; i++) {
             Rect bounds = new Rect();
 
-            layout.getLineBounds(i + startCursor.lineIndex, bounds);
+            layout.getLineBounds(i + startLineIndex, bounds);
             bounds.offset(paddingInset.x, paddingInset.y);
             if (i == 0) {
-                bounds.left = (int) startCursor.cursorCoordinate.x;
+                if (startCursor.associatedWordSpan != null)
+                    bounds.left = (int) (layout.getPrimaryHorizontal(startCursor.associatedWordSpan.first) + paddingInset.x);
+                else
+                    bounds.left = (int) startCursor.cursorCoordinate.x;
                 bounds.left += curvature;
-                bounds.right = (int) layout.getLineRight(i + startCursor.lineIndex) + paddingInset.x;
+                bounds.right = (int) layout.getLineRight(i + startLineIndex) + paddingInset.x;
             }
 
 
             if (i == lineBounds.length - 1) {
-                bounds.right = (int) endCursor.cursorCoordinate.x;
+                if (endCursor.associatedWordSpan != null)
+                    bounds.right = (int) (layout.getPrimaryHorizontal(endCursor.associatedWordSpan.second) + paddingInset.x);
+                else
+                    bounds.right = (int) endCursor.cursorCoordinate.x;
                 bounds.right -= curvature;
             } else {
-                bounds.right = (int) layout.getLineRight(i + startCursor.lineIndex) + paddingInset.x;
+                bounds.right = (int) layout.getLineRight(i + startLineIndex) + paddingInset.x;
             }
 
             lineBounds[i] = bounds;
@@ -200,7 +231,57 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
         lineSpacingExtra = getLineSpacingExtra();
 
         paddingInset = new Coordinate(getPaddingLeft(), getPaddingTop());
-        int lastIndex = getText().length();
+        CharSequence originalText = getText();
+
+        // generating cursor snapping index list
+        ArrayList<Pair<Integer, Integer>> wordEndLocations = new ArrayList<>();
+        int startIndex = 0;
+        /* previousCharacterCaseType modes:
+            0 - lowercase letter
+            1 - uppercase letter
+            2 - number
+            3 - other (not alphanumeric)
+           */
+        int previousCharacterCaseType = 3;
+        final int terminateIndex = originalText.length() - 1;
+        for (int i = 0; i < originalText.length(); i++) {
+            char character = originalText.charAt(i);
+            int characterCaseType;
+            if (Character.isAlphabetic(character)) {
+                characterCaseType = Character.isUpperCase(character) ? 1 : 0;
+            } else if (Character.isDigit(character)) {
+                characterCaseType = 2;
+            } else
+                characterCaseType = 3;
+            if(previousCharacterCaseType == 3 && characterCaseType < 3)
+                // if previous character is NOT alphanumeric and this character is
+                // alphanumeric indicating start of an word
+                startIndex = i;
+            else if (previousCharacterCaseType < 3) {
+                // if previous character is alphanumeric and this character is not
+                // Eg hello#word where # captures the 'hello'.
+                if (characterCaseType == 3)
+                    wordEndLocations.add(new Pair<>(startIndex, i));
+                else {
+                    if (i == terminateIndex)
+                        wordEndLocations.add(new Pair<>(startIndex, terminateIndex + 1));
+                    else if (
+                            // At reaching this point both previousCharacterCaseType and characterCaseType
+                            // are alpha numeric here breaks down combined words such as HelloWorld or hello25
+                            (previousCharacterCaseType == 0 && characterCaseType == 1)
+                            || (previousCharacterCaseType == 2 && characterCaseType != 2)
+                                    || (previousCharacterCaseType != 2 && characterCaseType == 2)
+                    ) {
+                        wordEndLocations.add(new Pair<>(startIndex, i));
+                        startIndex = i;
+                    }
+                }
+            }
+            previousCharacterCaseType = characterCaseType;
+        }
+        wordSnapLocations = wordEndLocations.toArray(new Pair[0]);
+
+        int lastIndex = originalText.length();
         int lastIndexLine = layout.getLineForOffset(lastIndex);
         endCursor = new CursorPoint(lastIndex, lastIndexLine);
         startCursor = new CursorPoint(0, 0);
@@ -263,7 +344,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
                         int endIndex = textLength;
                         for (int i = 0; i < textLength - 1; i++) {
                             char character = text.charAt(i);
-                            if (Character.isWhitespace(character)|| character == '.' || character == ',') {
+                            if (Character.isWhitespace(character) || character == '.' || character == ',') {
                                 if (i == offset) return true;
                                 if (i > offset) {
                                     endIndex = i;
@@ -275,6 +356,14 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
                         startCursor.update(startIndex, layout.getLineForOffset(startIndex));
                         endCursor.update(endIndex, layout.getLineForOffset(endIndex));
                         drawTextSelectionPolygon();
+                    } else if (selectedCursor != CursorSelectionMode.NOT_SELECTED) {
+                        if (selectedCursor == CursorSelectionMode.SELECTED_START && startCursor.associatedWordSpan != null) {
+                            startCursor.snapToIndex(startCursor.associatedWordSpan.first);
+                            drawTextSelectionPolygon();
+                        } else if (selectedCursor == CursorSelectionMode.SELECTED_END && endCursor.associatedWordSpan != null) {
+                            endCursor.snapToIndex(endCursor.associatedWordSpan.second);
+                            drawTextSelectionPolygon();
+                        }
                     }
                     getParent().requestDisallowInterceptTouchEvent(false);
                     selectedCursor = CursorSelectionMode.NOT_SELECTED;

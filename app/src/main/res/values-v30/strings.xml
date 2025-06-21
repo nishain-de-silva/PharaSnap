@@ -5,8 +5,5 @@
         For PharaSnap to capture and copy text on the screen. It need access to Accessibility service to read text block on screen. Additionally PharaSnap also capture screenshot to capture image blocks on the screen for image-to-text recognition. No personal data is collected and shared to third parties
         \nOn accessibility settings go to installed / Downloaded Apps > Select PharaSnap and toggle the switch \'on\' to grant accessibility service.
     </string>
-    <string name="capturing_modes_tutorial">When capturing text there are two modes,
-        \n1) Normal mode where you simply tap on text element on screen to capture (this could be button, label or multiline paragraph).
-        \n\n2) Image mode uses text recognition OCR (for now only support latin characters including english) to capture text on images.
-        \n\nYou can toggle between the two modes on left-most button on the widget.</string>
+
 </resources>

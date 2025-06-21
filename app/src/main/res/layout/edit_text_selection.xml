@@ -4,13 +4,32 @@
     android:gravity="center_horizontal"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/action_copy_entire_text"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:layout_marginBottom="12dp"
-        android:text="Select all text" />
+        android:layout_gravity="end">
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/action_search_web"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginEnd="12dp"
+            android:text="Search Web" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/action_copy_entire_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="Select all text" />
+    </LinearLayout>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginVertical="12dp"
+        android:textColor="@color/darkPurple"
+        android:text="Text cursor move and select text word by word"
+        />
     <ScrollView
         android:layout_width="match_parent"
         android:layout_weight="1"

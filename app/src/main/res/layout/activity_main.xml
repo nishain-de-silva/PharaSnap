@@ -47,10 +47,10 @@
             android:layout_marginTop="12dp"
             />
         <Button
-            android:id="@+id/preferences"
+            android:id="@+id/settings"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Preferences"
+            android:text="Settings"
             />
         <View
             android:layout_width="match_parent"

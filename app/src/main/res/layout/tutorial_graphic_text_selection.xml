@@ -16,6 +16,7 @@
         android:background="@drawable/text_hint"
         android:paddingHorizontal="20dp"
         android:paddingVertical="10dp"
+        android:textSize="15sp"
         android:text="@string/text_hint_default"
         android:textColor="@android:color/black"
         />
@@ -26,7 +27,7 @@
         android:src="@drawable/copy"
         android:layout_marginTop="5dp"
         android:layout_gravity="start"
-        android:background="@drawable/green_circle"
+        android:background="@drawable/primary_blue_circle"
         />
     <ImageButton
         android:layout_width="40dp"

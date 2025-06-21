@@ -40,7 +40,7 @@
 <!--        <item name="colorPrimary">@color/purple_500</item>-->
 <!--        <item name="font">@font/primary</item>-->
         <item name="fontFamily">@font/primary</item>
-        <item name="buttonStyle">@style/Theme.PharaSnap.MainMenuButton</item>
+        <item name="buttonStyle">@style/Theme.PharaSnap.Button</item>
         <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/primaryYellow</item>
         <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/logo</item>
         <item name="android:windowSplashScreenBrandingImage" tools:targetApi="s">@drawable/branding_banner</item>
@@ -63,7 +63,9 @@
     <style name="Theme.PharaSnap.EditTextModal" parent="Theme.PharaSnap.TransparentActivity">
         <item name="android:fontFamily">@font/primary</item>
     </style>
+
     <style name="Theme.PharaSnap.Activity" parent="Theme.PharaSnap">
+        <item name="buttonStyle">@style/Theme.PharaSnap.MainMenuButton</item>
         <item name="android:textSize">18sp</item>
         <item name="android:textColor">@color/darkPurple</item>
     </style>

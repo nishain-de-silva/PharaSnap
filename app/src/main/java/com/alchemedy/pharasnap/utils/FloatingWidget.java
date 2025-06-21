@@ -1,5 +1,6 @@
 package com.alchemedy.pharasnap.utils;
 
+import android.Manifest;
 import android.accessibilityservice.AccessibilityService;
 import android.app.Activity;
 import android.app.KeyguardManager;
@@ -10,39 +11,48 @@ import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Insets;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcelable;
+import android.provider.MediaStore;
 import android.service.quicksettings.Tile;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
 import android.view.Display;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
-import android.widget.Toast;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -51,17 +61,21 @@ import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.activities.EditTextModalActivity;
 import com.alchemedy.pharasnap.activities.MediaProjectionRequestActivity;
 import com.alchemedy.pharasnap.helper.Constants;
+import com.alchemedy.pharasnap.helper.Coordinate;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 import com.alchemedy.pharasnap.helper.EditedTextEntry;
 import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.helper.ScreenInfo;
 import com.alchemedy.pharasnap.helper.TextChangedListener;
 import com.alchemedy.pharasnap.helper.WidgetLocationCoordinate;
+import com.alchemedy.pharasnap.models.CopiedItem;
 import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
 import com.alchemedy.pharasnap.services.ShortcutTileLauncher;
+import com.alchemedy.pharasnap.widgets.BrowserModal;
 import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 import com.alchemedy.pharasnap.widgets.SelectionEditorTextView;
+import com.alchemedy.pharasnap.widgets.TabSelector;
 import com.alchemedy.pharasnap.widgets.TextHint;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.mlkit.vision.common.InputImage;
@@ -72,26 +86,44 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class FloatingWidget {
+
+    public static class Mode {
+        public final static int TEXT = 1;
+        public final static int CROPPED_IMAGE_CAPTURE = 2;
+    }
+
+    public static class TextDetectionMode {
+        public final static int AUTO = 0;
+        public final static int TEXT = 1;
+        public final static int TEXT_RECOGNITION = 2;
+    }
     public static boolean isWidgetIsShowing;
     private static int NODE_PROXIMITY_THRESHOLD;
     final private NodeExplorerAccessibilityService hostingService;
     private WindowManager windowManager;
-    private View overlayView;
+    private ViewGroup overlayView;
     private WidgetController widgetController;
+    private int textDetectionMode = TextDetectionMode.AUTO;
     private FloatingDismissWidget floatingDismissWidget;
     private boolean isWidgetExpanded = false;
     public boolean skipNotifyOnWidgetStop = false;
     private Modal modal;
     private BroadcastReceiver systemNavigationButtonTapListener = null;
-    private boolean isTextRecognitionEnabled = false;
-    private AccessibilityNodeInfo selectedNode, closeProximitySelectedNode;
+    private int mode = Mode.TEXT;
+    private AccessibilityNodeInfo selectedNode, closeProximitySelectedNode, imageNode;
     private int minArea, minProximityDistance;
     private MediaProjection mediaProjection;
     private MediaProjectionManager mediaProjectionManager;
@@ -99,11 +131,11 @@ public class FloatingWidget {
     private Runnable mediaProjectionIdlePostRunnable = null;
     private ImageReader imageReader = null;
     private ClipboardManager clipboardManager;
-    private ImageButton toggleModeButton;
     private TextHint textHint;
+    private BrowserModal browserModal;
     private VirtualDisplay mediaProjectionDisplay;
     private boolean isAccessibilityServiceBusy;
-    private ArrayList<String> collectedTexts = null;
+    private ArrayList<CopiedItem> collectedTexts = null;
     final private MessageHandler messageHandler;
 
     private CustomOverlayView rootOverlay;
@@ -129,29 +161,32 @@ public class FloatingWidget {
         }
     }
 
-    private void showResult(@Nullable Rect bound, String text) {
-        if (text.isEmpty()) {
-            if (isTextRecognitionEnabled)
+    private void showResult(@Nullable CopiedItem copiedItem) {
+        if (copiedItem == null) {
+            if (mode == Mode.TEXT)
                 textHint.changeText(hostingService.getString(R.string.text_detection_failed));
             else
-                textHint.changeText(hostingService.getString(R.string.text_detection_failed_in_text_mode));
+                textHint.changeText("Something went wrong could not capture the image");
             return;
         }
 
         View copyIndicator = overlayView.findViewById(R.id.text_copy_indicator);
-        if (rootOverlay.addNewBoundingBox(bound, collectedTexts, text)) {
-            if (copyIndicator.getVisibility() != View.VISIBLE)
-                copyIndicator.setVisibility(View.VISIBLE);
-
+        if (mode == Mode.CROPPED_IMAGE_CAPTURE) {
+            rootOverlay.addSingleBoundingBox(copiedItem.rect);
+            textHint.changeText("Image is saved to the storage");
+            return;
+        }
+        if (rootOverlay.addNewBoundingBox(collectedTexts, copiedItem)) {
+            copyIndicator.setVisibility(View.VISIBLE);
             textHint.changeText("Text block added. Tap here to edit selection. Tap on selection block again to remove");
-        } else if (collectedTexts.size() == 0)
+        } else if (collectedTexts.isEmpty())
             copyIndicator.setVisibility(View.GONE);
     }
 
     void saveTextToStorageIfNeeded(@Nullable String textToStore) {
-        if (textToStore == null && collectedTexts.size() == 0) return;
+        if (textToStore == null && collectedTexts.isEmpty()) return;
         ArrayList<String> entries = new ArrayList<>();
-        String text = textToStore == null ? String.join("\n", collectedTexts) : textToStore;
+        String text = textToStore == null ? String.join("\n", ArrayFunctions.map(collectedTexts, i -> i.text)) : textToStore;
         try {
             JSONArray inputJSONArray = new JSONArray(sharedPreferences.getString(Constants.ENTRIES_KEY, "[]"));
             for (int i = 0; i < inputJSONArray.length(); i++) {
@@ -215,7 +250,7 @@ public class FloatingWidget {
                     super.onHeaderBackPressed(modalWindow);
                 else {
                     if (editedText != null)
-                        showEntryList(new EditedTextEntry(collectedTexts.size() > 0 ? itemIndex - 1 : itemIndex, editedText));
+                        showEntryList(new EditedTextEntry(!collectedTexts.isEmpty() ? itemIndex - 1 : itemIndex, editedText));
                     else
                         showEntryList(null);
                 }
@@ -225,21 +260,21 @@ public class FloatingWidget {
             public void onBeforeModalShown(ViewGroup inflatedView) {
                 selectedText = inflatedView.findViewById(R.id.selectedText);
                 selectedText.setText(text);
-                inflatedView.findViewById(R.id.action_copy_entire_text).setOnClickListener(v -> {
-                    selectedText.selectAllText();
+                inflatedView.findViewById(R.id.action_copy_entire_text).setOnClickListener(v -> selectedText.selectAllText());
+                inflatedView.findViewById(R.id.action_search_web).setOnClickListener(v -> {
+                    modal.closeModal();
+                    browserModal.show(selectedText.getSelectedText());
                 });
                 inflatedView.findViewById(R.id.action_copy_selected_text).setOnClickListener(v -> {
                     String text = selectedText.getSelectedText();
                     copyTextAndDismiss(text, isDraftText);
                 });
-                inflatedView.findViewById(R.id.action_change_text_content).setOnClickListener(view -> {
-                    setupEditTextContentModal(selectedText, new TextChangedListener() {
-                        @Override
-                        public void onTextChanged(String text) {
-                            editedText = text;
-                        }
-                    });
-                });
+                inflatedView.findViewById(R.id.action_change_text_content).setOnClickListener(view -> setupEditTextContentModal(selectedText, new TextChangedListener() {
+                    @Override
+                    public void onTextChanged(String text) {
+                        editedText = text;
+                    }
+                }));
             }
 
             @Override
@@ -248,6 +283,7 @@ public class FloatingWidget {
             }
         });
     }
+
 
     void showEntryList(@Nullable EditedTextEntry updatedTextEntry) {
         KeyguardManager keyguardManager = (KeyguardManager) hostingService.getSystemService(Context.KEYGUARD_SERVICE);
@@ -260,8 +296,12 @@ public class FloatingWidget {
             public void onBeforeModalShown(ViewGroup inflatedView) {
                 String jsonString = sharedPreferences.getString(Constants.ENTRIES_KEY, "[]");
                 ArrayList<EntryListAdapter.Item> items = new ArrayList<>();
-                if(collectedTexts.size() > 0)
-                    items.add(new EntryListAdapter.Item(String.join("\n", collectedTexts), true));
+                if(!collectedTexts.isEmpty())
+                    items.add(new EntryListAdapter.Item(String.join(
+                            "\n",
+                            ArrayFunctions.map(collectedTexts, i -> i.text)),
+                            true)
+                    );
                 try {
                     JSONArray jsonArray = new JSONArray(jsonString);
                     if (updatedTextEntry != null) {
@@ -336,49 +376,50 @@ public class FloatingWidget {
             mediaProjectionIdleHandler.postDelayed(mediaProjectionIdlePostRunnable, 1000 * 7);
         }
     }
-    private void toggleTextRecognitionMode(boolean skipCountdownTermination) {
-        toggleModeButton.setImageResource(isTextRecognitionEnabled ? R.drawable.character : R.drawable.image);
-        if (isTextRecognitionEnabled) {
+    private void setTextRecognitionMode(int newMode, boolean skipCountdownTermination) {
+        if (newMode == mode) return;
+        clearAllSelections(false);
+        mode = newMode;
+        textHint.changeMode(mode);
+        ((ImageButton) overlayView.findViewById(R.id.toggleMode)).setImageResource(newMode == Mode.TEXT ? R.drawable.character : R.drawable.camera);
+
+        if (newMode == Mode.TEXT) {
             if (!skipCountdownTermination)
                 startCountdownToTerminateMediaProjection();
         } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             if (imageReader == null) {
-                requestMediaProjection();
+                requestMediaProjection(null);
             } else {
-                if (mediaProjectionIdleHandler != null) {
-                    mediaProjectionIdleHandler.removeCallbacks(mediaProjectionIdlePostRunnable);
-                    mediaProjectionIdlePostRunnable = null;
-                    mediaProjectionIdleHandler = null;
-                }
+                // if re-visited image capture modes clear the timeout
+                clearMediaProjectionIdleWatchDog();
             }
         }
-        isTextRecognitionEnabled = !isTextRecognitionEnabled;
-        textHint.changeMode(isTextRecognitionEnabled);
     }
 
     private void toggleExpandWidget() {
         if (isWidgetExpanded) {
             modal.closeModal();
+            browserModal.close();
             clearAllSelections(true);
             widgetController.close();
-            if (isTextRecognitionEnabled)
-                startCountdownToTerminateMediaProjection();
+            startCountdownToTerminateMediaProjection();
             toggleListenToSystemBroadcastToCollapseWidget(false);
             textHint.setVisibility(View.GONE);
+            overlayView.findViewById(R.id.active_setting_indicator).setVisibility(View.GONE);
+            textDetectionMode = TextDetectionMode.AUTO;
         } else {
-            if ((Build.VERSION.SDK_INT < Build.VERSION_CODES.R) && isTextRecognitionEnabled ) {
+            if ((Build.VERSION.SDK_INT < Build.VERSION_CODES.R) && mode != Mode.TEXT) {
                 if (imageReader == null) {
-                    toggleTextRecognitionMode(true);
+                    // the mediaProjection has stopped externally while staying on media capture modes then
+                    // revert back to text mode.
+                    setTextRecognitionMode(Mode.TEXT, true);
                 } else {
-                    if (mediaProjectionIdleHandler != null) {
-                        mediaProjectionIdleHandler.removeCallbacks(mediaProjectionIdlePostRunnable);
-                        mediaProjectionIdlePostRunnable = null;
-                        mediaProjectionIdleHandler = null;
-                    }
+                    // if on media capture modes and if widget expanded dismiss the current shutdown timer
+                    clearMediaProjectionIdleWatchDog();
                 }
             }
 
-            textHint.changeMode(isTextRecognitionEnabled);
+            textHint.changeMode(mode);
             toggleListenToSystemBroadcastToCollapseWidget(true);
             widgetController.open();
         }
@@ -407,13 +448,17 @@ public class FloatingWidget {
         }
     }
 
-    private void clearAllSelections(boolean shouldStoreLastText) {
-        if (collectedTexts.size() == 0) return;
+    private boolean clearAllSelections(boolean shouldStoreLastText) {
+        if (mode == Mode.CROPPED_IMAGE_CAPTURE) {
+            return rootOverlay.clearAllSelections();
+        }
         rootOverlay.clearAllSelections();
+        if (collectedTexts.isEmpty()) return true;
         if (shouldStoreLastText)
             saveTextToStorageIfNeeded(null);
         collectedTexts.clear();
         overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
+        return false;
     }
 
     private void onOrientationChanged(Context context, WindowManager.LayoutParams params) {
@@ -453,12 +498,16 @@ public class FloatingWidget {
         }
     }
 
+    public void changeWidgetPositionOrientation(boolean isWidgetLeftOriented) {
+        widgetController.hotReloadWidgetOrientation(isWidgetLeftOriented);
+    }
+
     private void showFloatingWidget(boolean shouldExpand) {
         windowManager = (WindowManager) hostingService.getSystemService(Context.WINDOW_SERVICE);
         clipboardManager = (ClipboardManager) hostingService.getSystemService(Context.CLIPBOARD_SERVICE);
 
         // Inflate overlay layout
-        overlayView = LayoutInflater.from(hostingService).inflate(R.layout.overlay_layout, null);
+        overlayView = (ViewGroup) LayoutInflater.from(hostingService).inflate(R.layout.overlay_layout, null);
         modal = new Modal(overlayView);
 
         currentOrientation = hostingService.getResources().getConfiguration().orientation;
@@ -517,7 +566,6 @@ public class FloatingWidget {
             throw new RuntimeException(e);
         }
         widgetController = new WidgetController(hostingService, windowManager, params, overlayView);
-        params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
         if (shouldExpand) {
             toggleListenToSystemBroadcastToCollapseWidget(true);
             isWidgetExpanded = true;
@@ -530,65 +578,96 @@ public class FloatingWidget {
         windowManager.addView(overlayView, params);
         // Find the button in the overlay
         rootOverlay = overlayView.findViewById(R.id.rootOverlay);
+        browserModal = overlayView.findViewById(R.id.browser_window);
 
-        toggleModeButton = overlayView.findViewById(R.id.toggle);
         ImageButton listButton = overlayView.findViewById(R.id.list);
         ImageButton stopButton = overlayView.findViewById(R.id.stop);
+        ImageButton settingsButton = overlayView.findViewById(R.id.textCaptureMode);
         ImageButton eraserButton = overlayView.findViewById(R.id.eraser);
         eraserButton.setOnClickListener(v -> {
-            if (collectedTexts.size() == 0)
+            if (clearAllSelections(false))
                 textHint.changeText("No text selections to clear");
-            else
-                clearAllSelections(false);
         });
         textHint = overlayView.findViewById(R.id.text_hint);
         textHint.setOnTapListener(new TextHint.OnTapListener() {
             @Override
             public void onTap() {
-                if (collectedTexts.size() == 0) return;
-                String collectiveText = String.join("\n", collectedTexts);
+                if (collectedTexts.isEmpty()) return;
+                String collectiveText = String.join("\n", ArrayFunctions.map(collectedTexts, i -> i.text));
                 setupEditSelectionModal(collectiveText, true, -1);
             }
         });
-
-        toggleModeButton.setOnClickListener(v -> toggleTextRecognitionMode(false));
+        overlayView.findViewById(R.id.toggleMode).setOnClickListener(v -> setTextRecognitionMode(mode == Mode.TEXT ? Mode.CROPPED_IMAGE_CAPTURE : Mode.TEXT, false));
         stopButton.setOnClickListener(v -> onStopWidget());
         listButton.setOnClickListener(v -> showEntryList(null));
+        settingsButton.setOnClickListener(v -> {
+            modal.showModal(Modal.ModalType.SETTINGS, new Modal.ModalCallback() {
+                @Override
+                public void onBeforeModalShown(ViewGroup inflatedView) {
+                    TabSelector tabSelector = inflatedView.findViewById(R.id.mode_tab_selector);
+                    tabSelector.setup(
+                            hostingService.getResources().getStringArray(R.array.text_mode_descriptions),
+                            textDetectionMode,
+                            index -> {
+                                overlayView.findViewById(R.id.active_setting_indicator).setVisibility(index > 0 ? View.VISIBLE : View.GONE);
+                                textDetectionMode = index;
+                                modal.closeModal();
+                            });
+                }
+            });
+        });
+
         overlayView.findViewById(R.id.text_hint_close).setOnClickListener(v -> textHint.setVisibility(View.GONE));
 
 
         // Handle touch events on the overlay
         rootOverlay.setOnTapListener(new CustomOverlayView.OnTapListener() {
             @Override
-            public void onTap(CoordinateF tappedCoordinate) {
+            public void onTap(CoordinateF tappedCoordinate, boolean isLongPress) {
                 // Record tap coordinates
                 if (isAccessibilityServiceBusy) {
                     textHint.changeTextAndNotify("Sorry, we are still busy looking for text element you tapped previously");
                     return;
                 }
-//                rootOverlay.drawDebugDot((int) tappedCoordinate.x, (int) tappedCoordinate.y);
+
                 int removedIndex = rootOverlay.removeSelection(tappedCoordinate.x, tappedCoordinate.y);
                 if (removedIndex != -1) {
-                    collectedTexts.remove(removedIndex);
-                    if (collectedTexts.size() == 0)
-                        overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
+                    if (mode == Mode.TEXT) {
+                        collectedTexts.remove(removedIndex);
+                        if (collectedTexts.isEmpty())
+                            overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
+                    }
                     return;
                 }
+
                 overlayView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
                     @Override
                     public void onLayoutChange(View view, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
                         overlayView.removeOnLayoutChangeListener(this);
-                        getNodeResult(tappedCoordinate.x, tappedCoordinate.y, !isTextRecognitionEnabled, new NodeCapturedCallback() {
+                        getNodeResult(tappedCoordinate.x, tappedCoordinate.y, isLongPress, new NodeCapturedCallback() {
                             @Override
-                            void onResult(NodeResult result) {
+                            void onResult(@Nullable NodeResult result) {
                                 // ...regain focus to overlay view to capture key event on system navigation back press
                                 params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
                                 windowManager.updateViewLayout(overlayView, params);
 
-                                if (isTextRecognitionEnabled) {
-                                    captureScreenshot(result.bound, (int) tappedCoordinate.x, (int) tappedCoordinate.y);
+                                if (isLongPress) {
+                                    if (result != null)
+                                        browserModal.show(result.text);
+                                    isAccessibilityServiceBusy = false;
+                                    return;
+                                }
+
+                                if (result == null) {
+                                    showResult(null);
+                                    isAccessibilityServiceBusy = false;
+                                    return;
+                                }
+
+                                if (mode == Mode.CROPPED_IMAGE_CAPTURE) {
+                                    captureScreenshot(result.bound, (int) tappedCoordinate.x, (int) tappedCoordinate.y, false, null);
                                 } else {
-                                    showResult(result.bound, result.text);
+                                    showResult(new CopiedItem(result.text, result.bound, result.isOCRText));
                                     isAccessibilityServiceBusy = false;
                                 }
                             }
@@ -613,7 +692,7 @@ public class FloatingWidget {
         rootOverlay.setOnDismissListener(new CustomOverlayView.OnDismissListener() {
             @Override
             protected void onDismiss() {
-                if(isWidgetExpanded && !modal.handleSystemGoBack())
+                if(isWidgetExpanded && !modal.handleSystemGoBack() && !browserModal.close())
                     toggleExpandWidget();
             }
         });
@@ -635,7 +714,8 @@ public class FloatingWidget {
 
             @Override
             public void onRelease() {
-                floatingDismissWidget.onGestureReleased(enableButton, params);
+                if(isWidgetExpanded || !floatingDismissWidget.onGestureReleased(enableButton, params))
+                    widgetController.updateLastDownCoordinate();
             }
         }, overlayView, windowManager, params);
     }
@@ -648,83 +728,241 @@ public class FloatingWidget {
         overlayView.findViewById(R.id.loading).setVisibility(isProcessing ? View.VISIBLE : View.GONE);
     }
 
-    void processScreenshot(Rect bounds, int tappedCoordinateX, int tappedCoordinateY, Bitmap screenBitmap) {
+    private void submitCaptureImageToExternalStorage(Bitmap capturedImage) {
+        SimpleDateFormat timeStamp = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss", Locale.getDefault());
+        String displayName = timeStamp.format(new Date()) + ".jpg";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            OutputStream fos;
+            try {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Images.Media.DISPLAY_NAME, displayName);
+                values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES); // Gallery folder
+                values.put(MediaStore.Images.Media.IS_PENDING, 1);
+
+                ContentResolver resolver = hostingService.getContentResolver();
+                Uri collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+                Uri imageUri = resolver.insert(collection, values);
+
+                if (imageUri != null) {
+                    fos = resolver.openOutputStream(imageUri);
+                    capturedImage.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                    fos.flush();
+                    fos.close();
+
+                    values.clear();
+                    values.put(MediaStore.Images.Media.IS_PENDING, 0);
+                    resolver.update(imageUri, values, null, null);
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(hostingService, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                textHint.changeTextAndNotify("Storage permission has not granted. Please go to settings and grant storage permissions.");
+                return;
+            }
+            String imagesDir = Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_PICTURES
+            ).toString();
+
+            File folder = new File(imagesDir);
+
+            File image = new File(folder, displayName);
+            try {
+                FileOutputStream out = new FileOutputStream(image);
+                capturedImage.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                out.flush();
+                out.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private NodeResult getNearByTextBlocks(Text.TextBlock tappedTextBlock, List<Text.TextBlock> textBlocks, Coordinate offset) {
+        String capturedText = tappedTextBlock.getText();
+        Rect proposedRect = new Rect(tappedTextBlock.getBoundingBox());
+        List<Text.Line> lines = tappedTextBlock.getLines();
+        float sumHeight = 0;
+        for (Text.Line line : lines) {
+            sumHeight += line.getBoundingBox().height();
+        }
+        float averageLineHeight = sumHeight / lines.size();
+
+        boolean isCloseProximityBlockAvailable;
+        do {
+            isCloseProximityBlockAvailable = false;
+            for (Text.TextBlock block : textBlocks) {
+                Rect blockBoundingBox = block.getBoundingBox();
+                if (blockBoundingBox != null &&
+                        blockBoundingBox.bottom <= proposedRect.top &&
+                        (
+                                blockBoundingBox.left < proposedRect.right && proposedRect.left < blockBoundingBox.right
+                                        && blockBoundingBox.top < proposedRect.bottom && proposedRect.top < (blockBoundingBox.bottom + NODE_PROXIMITY_THRESHOLD)
+                        )
+                ) {
+                    float differanceRatio = block.getLines().get(0).getBoundingBox().height() / averageLineHeight;
+                    if (differanceRatio > 1.25f || differanceRatio < 0.75f)
+                        continue;
+                    if (blockBoundingBox.left < proposedRect.left)
+                        proposedRect.left = blockBoundingBox.left;
+                    if (blockBoundingBox.right > proposedRect.right)
+                        proposedRect.right = blockBoundingBox.right;
+                    proposedRect.top = blockBoundingBox.top;
+                    capturedText = block.getText() + "\n" + capturedText;
+                    isCloseProximityBlockAvailable = true;
+                    break;
+                }
+            }
+        } while (isCloseProximityBlockAvailable);
+
+        do {
+            isCloseProximityBlockAvailable = false;
+            for (Text.TextBlock block : textBlocks) {
+                Rect blockBoundingBox = block.getBoundingBox();
+                if (blockBoundingBox != null &&
+                        blockBoundingBox.top >= proposedRect.bottom &&
+                        (
+                                blockBoundingBox.left < proposedRect.right && proposedRect.left < blockBoundingBox.right
+                                        && (blockBoundingBox.top - NODE_PROXIMITY_THRESHOLD) < proposedRect.bottom && proposedRect.top < blockBoundingBox.bottom
+                        )
+                ) {
+                    float differanceRatio = block.getLines().get(0).getBoundingBox().height() / averageLineHeight;
+                    if (differanceRatio > 1.25f || differanceRatio < 0.75f)
+                        continue;
+                    if (blockBoundingBox.left < proposedRect.left)
+                        proposedRect.left = blockBoundingBox.left;
+                    if (blockBoundingBox.right > proposedRect.right)
+                        proposedRect.right = blockBoundingBox.right;
+                    proposedRect.bottom = blockBoundingBox.bottom;
+                    capturedText = capturedText + "\n" + block.getText();
+                    isCloseProximityBlockAvailable = true;
+                    break;
+                }
+            }
+        } while (isCloseProximityBlockAvailable);
+        proposedRect.offset(offset.x, offset.y);
+
+        return new NodeResult(proposedRect, capturedText);
+    }
+
+    void processScreenshot(Rect bounds, int tappedCoordinateX, int tappedCoordinateY, Bitmap screenBitmap, boolean isWebSearch, ImageRecognitionResult imageRecognitionResult) {
         TextRecognizer recognizer =
                 TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         bounds.bottom = Math.min(bounds.bottom, screenBitmap.getHeight());
         bounds.top = Math.max(bounds.top, 0);
+        if (bounds.left < 0)
+            bounds.left = 0;
+        if (bounds.left + bounds.width() > screenBitmap.getWidth())
+            bounds.right = screenBitmap.getWidth() - bounds.left;
 
         Bitmap croppedImage = Bitmap.createBitmap(screenBitmap, bounds.left, bounds.top, bounds.width(), bounds.height());
+        if (mode == Mode.CROPPED_IMAGE_CAPTURE && !isWebSearch) {
+            submitCaptureImageToExternalStorage(croppedImage);
+            showResult(new CopiedItem(bounds));
+            setIsProcessing(false);
+            return;
+        }
         setIsProcessing(true);
         recognizer.process(
                         InputImage.fromBitmap(croppedImage, 0)
                 )
                 .addOnSuccessListener(result -> {
                     List<Text.TextBlock> textBlocks = result.getTextBlocks();
-                    Pair<Rect, String> selectedCandidate = null;
-                    Pair<Rect, String> closeProximityCandidate = null;
+                    Text.TextBlock selectedCandidate = null;
+                    Text.TextBlock closeProximityCandidate = null;
                     int minProximityDistance = Integer.MAX_VALUE;
+                    Coordinate relativeTapLocation = new Coordinate(tappedCoordinateX - bounds.left, tappedCoordinateY - bounds.top);
                     for (Text.TextBlock block: textBlocks) {
                         Rect trialBoundingBox = block.getBoundingBox();
                         if (trialBoundingBox != null) {
-                            if (trialBoundingBox.contains(tappedCoordinateX - bounds.left, tappedCoordinateY - bounds.top)) {
-                                trialBoundingBox.offset(bounds.left, bounds.top);
-                                selectedCandidate = new Pair<>(trialBoundingBox, block.getText());
+                            if (trialBoundingBox.contains(relativeTapLocation.x, relativeTapLocation.y)) {
+                                if (isWebSearch) {
+                                    List<Text.Line> lines = block.getLines();
+                                    for (Text.Line line : lines) {
+                                        Rect lineBoundingBox = line.getBoundingBox();
+                                        if(lineBoundingBox != null && lineBoundingBox.contains(relativeTapLocation.x, relativeTapLocation.y)) {
+                                            List<Text.Element> words = line.getElements();
+                                            for (Text.Element word : words) {
+                                                Rect wordBoundingBox = word.getBoundingBox();
+                                                if (wordBoundingBox != null && wordBoundingBox.contains(relativeTapLocation.x, relativeTapLocation.y)) {
+                                                    wordBoundingBox.offset(bounds.left, bounds.top);
+                                                    String wordText = word.getText();
+
+                                                    if (!wordText.isEmpty())
+                                                        imageRecognitionResult.onResult(true, new NodeResult(wordBoundingBox, wordText));
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    imageRecognitionResult.onResult(false, new NodeResult(null, ""));
+                                    return;
+                                }
+                                selectedCandidate = block;
                             } else {
                                 int proximity = getNodeProximityToCoordinate(trialBoundingBox, tappedCoordinateX - bounds.left, tappedCoordinateY - bounds.top);
                                 if (proximity <= NODE_PROXIMITY_THRESHOLD && proximity < minProximityDistance) {
                                     minProximityDistance = proximity;
-                                    trialBoundingBox.offset(bounds.left, bounds.top);
-                                    closeProximityCandidate = new Pair<>(trialBoundingBox, block.getText());
+                                    closeProximityCandidate = block;
                                 }
                             }
                         }
                     }
 
                     if (selectedCandidate != null) {
-                        showResult(selectedCandidate.first, selectedCandidate.second);
-                    } else {
-                        if (closeProximityCandidate != null) {
-                            showResult(closeProximityCandidate.first, closeProximityCandidate.second);
-                            return;
-                        }
-                        List<Text.TextBlock> blocks = result.getTextBlocks();
-                        Rect maximumBound = new Rect(Integer.MAX_VALUE, Integer.MAX_VALUE, -1, -1);
-                        if(blocks.size() > 0) {
-                            for (Text.TextBlock block : blocks) {
-                                Rect blockBoundingRect = block.getBoundingBox();
-                                if (blockBoundingRect != null) {
-                                    blockBoundingRect.offset(bounds.left, bounds.top);
-                                    if (blockBoundingRect.left < maximumBound.left)
-                                        maximumBound.left = blockBoundingRect.left;
-                                    if (blockBoundingRect.top < maximumBound.top)
-                                        maximumBound.top = blockBoundingRect.top;
-                                    if (blockBoundingRect.right > maximumBound.right)
-                                        maximumBound.right = blockBoundingRect.right;
-                                    if (blockBoundingRect.bottom > maximumBound.bottom)
-                                        maximumBound.bottom = blockBoundingRect.bottom;
-                                }
-                            }
-                            showResult(maximumBound, result.getText());
-                        } else
-                            showResult(bounds, "");
+                        imageRecognitionResult.onResult(true, getNearByTextBlocks(selectedCandidate, textBlocks, new Coordinate(bounds.left, bounds.top)));
+                        return;
                     }
+                    if (closeProximityCandidate != null) {
+                        imageRecognitionResult.onResult(true, getNearByTextBlocks(closeProximityCandidate, textBlocks, new Coordinate(bounds.left, bounds.top)));
+                        return;
+                    }
+                    List<Text.TextBlock> blocks = result.getTextBlocks();
+                    if (blocks.isEmpty()) {
+                        imageRecognitionResult.onResult(false, null);
+                        return;
+                    }
+                    Rect maximumBound = new Rect(Integer.MAX_VALUE, Integer.MAX_VALUE, -1, -1);
+                    for (Text.TextBlock block : blocks) {
+                        Rect blockBoundingRect = block.getBoundingBox();
+                        if (blockBoundingRect != null) {
+                            blockBoundingRect.offset(bounds.left, bounds.top);
+                            if (blockBoundingRect.left < maximumBound.left)
+                                maximumBound.left = blockBoundingRect.left;
+                            if (blockBoundingRect.top < maximumBound.top)
+                                maximumBound.top = blockBoundingRect.top;
+                            if (blockBoundingRect.right > maximumBound.right)
+                                maximumBound.right = blockBoundingRect.right;
+                            if (blockBoundingRect.bottom > maximumBound.bottom)
+                                maximumBound.bottom = blockBoundingRect.bottom;
+                        }
+                    }
+                    imageRecognitionResult.onResult(false, new NodeResult(maximumBound, result.getText()));
                 }).addOnCompleteListener(tsk -> setIsProcessing(false));
     }
 
     void changeOverlayContentVisibility(boolean isVisible) {
         overlayView.setVisibility(isVisible ? View.VISIBLE : View.INVISIBLE);
     }
-    void captureScreenshot(@Nullable Rect bounds, int tappedCoordinateX, int tappedCoordinateY) {
+    void captureScreenshot(@Nullable Rect bounds, int tappedCoordinateX, int tappedCoordinateY, boolean isWebSearch, ImageRecognitionResult imageRecognitionResult) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            if (imageReader == null) {
+                requestMediaProjection(() -> captureScreenshot(bounds, tappedCoordinateX, tappedCoordinateY, isWebSearch, imageRecognitionResult));
+                return;
+            }
+            clearMediaProjectionIdleWatchDog();
+        }
         if (bounds == null) {
-            showResult(null, "");
+            imageRecognitionResult.onResult(false, null);
             isAccessibilityServiceBusy = false;
             return;
         }
 
         changeOverlayContentVisibility(false);
-//        ImageView debugImage = overlayView.findViewById(R.id.debug_image);
-//        debugImage.setVisibility(View.GONE);
         new Handler().postDelayed(() -> {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -733,13 +971,17 @@ public class FloatingWidget {
                     public void onSuccess(@NonNull AccessibilityService.ScreenshotResult screenshotResult) {
                         changeOverlayContentVisibility(true);
                         Bitmap bitmap = Bitmap.wrapHardwareBuffer(screenshotResult.getHardwareBuffer(), screenshotResult.getColorSpace());
-                        if (bitmap != null)
+                        if (bitmap != null) {
+                            assert bounds != null;
                             processScreenshot(
                                     bounds,
                                     tappedCoordinateX,
                                     tappedCoordinateY,
-                                    bitmap
+                                    bitmap,
+                                    isWebSearch,
+                                    imageRecognitionResult
                             );
+                        }
                         else {
                             changeOverlayContentVisibility(true);
                             isAccessibilityServiceBusy = false;
@@ -761,30 +1003,12 @@ public class FloatingWidget {
                         image.getHeight(), Bitmap.Config.ARGB_8888);
                 screenBitmap.copyPixelsFromBuffer(plane.getBuffer());
                 image.close();
-                processScreenshot(bounds, tappedCoordinateX, tappedCoordinateY, screenBitmap);
+                processScreenshot(bounds, tappedCoordinateX, tappedCoordinateY, screenBitmap, isWebSearch, imageRecognitionResult);
             }
         }, 100);
     }
 
-    private void runForegroundWithNotification(String title, String description) {
-        NotificationManager notificationManager = (NotificationManager) hostingService.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            notificationManager.createNotificationChannel(new NotificationChannel("screen_capture", "Screen Capture Session", NotificationManager.IMPORTANCE_DEFAULT));
-            hostingService.startForeground(100, new Notification.Builder(hostingService, "screen_capture").
-                    setContentTitle(title)
-                    .setContentText(description)
-                    .build()
-            );
-        } else {
-            hostingService.startForeground(100, new Notification.Builder(hostingService).
-                    setContentTitle(title)
-                    .setContentText(description)
-                    .build()
-            );
-        }
-    }
-
-    private void requestMediaProjection() {
+    private void requestMediaProjection(@Nullable Runnable postCallback) {
         overlayView.setVisibility(View.GONE);
         WindowManager.LayoutParams params = (WindowManager.LayoutParams) overlayView.getLayoutParams();
         params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
@@ -796,7 +1020,15 @@ public class FloatingWidget {
         Intent screenCaptureIntent = mediaProjectionManager.createScreenCaptureIntent();
         Intent activityIntent = new Intent(hostingService, MediaProjectionRequestActivity.class);
         activityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        activityIntent.putExtra("screenCaptureIntent", screenCaptureIntent);
+        activityIntent.putExtra(Constants.CURRENT_CAPTURE_MODE, mode);
+        activityIntent.putExtra(Constants.SCREEN_CAPTURE_INTENT, screenCaptureIntent);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                mode == Mode.CROPPED_IMAGE_CAPTURE
+                && ContextCompat.checkSelfPermission(hostingService, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            activityIntent.putExtra(Constants.REQUEST_STORAGE_PERMISSION, true);
+        }
 
         messageHandler.registerReceiverOnce(new BroadcastReceiver() {
             @Override
@@ -806,13 +1038,31 @@ public class FloatingWidget {
                 overlayView.setVisibility(View.VISIBLE);
                 int resultCode = intent == null ? Activity.RESULT_CANCELED : intent.getIntExtra("resultCode", Activity.RESULT_CANCELED);
                 if(resultCode != Activity.RESULT_OK) {
-                    // if user rejected the media projection request revert back to text mode
-                    toggleTextRecognitionMode(true);
+                    // if user rejected the media projection or storage permission request revert back to text mode
+                    if (isAccessibilityServiceBusy)
+                        isAccessibilityServiceBusy = false;
+                    setTextRecognitionMode(Mode.TEXT, true);
                     return;
                 }
                 Intent data = intent.getParcelableExtra("data");
-                runForegroundWithNotification("Capturing Screenshots", "session to capture screenshots");
-
+                String notificationTitle = "Capturing Screenshots";
+                String notificationContentDescription = "session to capture screenshots";
+                NotificationManager notificationManager = (NotificationManager) hostingService.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    notificationManager.createNotificationChannel(new NotificationChannel("screen_capture", "Screen Capture Session", NotificationManager.IMPORTANCE_DEFAULT));
+                    hostingService.startForeground(100, new Notification.Builder(hostingService, "screen_capture").
+                            setContentTitle(notificationTitle)
+                            .setContentText(notificationContentDescription)
+                            .build()
+                    );
+                } else {
+                    hostingService.startForeground(100, new Notification.Builder(hostingService).
+                            setContentTitle(notificationTitle)
+                            .setContentText(notificationContentDescription)
+                            .build()
+                    );
+                }
+                assert data != null;
                 mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
                 ScreenInfo screenInfo = getScreenConfiguration();
 
@@ -827,11 +1077,9 @@ public class FloatingWidget {
                         mediaProjectionDisplay = null;
                         imageReader = null;
                         hostingService.stopForeground(true);
-                        if (mediaProjectionIdleHandler != null) {
-                            mediaProjectionIdleHandler.removeCallbacks(mediaProjectionIdlePostRunnable);
-                        }
-                        if (isTextRecognitionEnabled && overlayView != null && isWidgetExpanded) {
-                            toggleTextRecognitionMode(true);
+                        clearMediaProjectionIdleWatchDog();
+                        if (mode != Mode.TEXT && overlayView != null && isWidgetExpanded) {
+                            setTextRecognitionMode(Mode.TEXT, true);
                         }
                     }
                 }, null);
@@ -845,6 +1093,9 @@ public class FloatingWidget {
                         null,
                         null
                 );
+                if (postCallback != null) {
+                    postCallback.run();
+                }
             }
         }, Constants.MEDIA_PROJECTION_DATA);
         hostingService.startActivity(activityIntent);
@@ -874,8 +1125,9 @@ public class FloatingWidget {
         if (nodeBound.contains(coordinateX, coordinateY) && node.isVisibleToUser()) {
             int area = nodeBound.height() * nodeBound.width();
             if (area <= minArea) {
-                if (isTextRecognitionEnabled || !getText(node).isEmpty())
+                if (getText(node) != null)
                     selectedNode = node;
+                imageNode = node;
                 minArea = area;
             }
             for (int i = 0; i < node.getChildCount(); i++) {
@@ -886,11 +1138,12 @@ public class FloatingWidget {
                 for (int i = 0; i < node.getChildCount(); i++) {
                     isInsideElement(node.getChild(i), coordinateX, coordinateY);
                 }
-            } else if (!isTextRecognitionEnabled) {
+            } else {
                 int proximity = getNodeProximityToCoordinate(nodeBound, coordinateX, coordinateY);
-                if(proximity < NODE_PROXIMITY_THRESHOLD && node.isVisibleToUser()) {
+                if (proximity < NODE_PROXIMITY_THRESHOLD && node.isVisibleToUser()) {
                     if (proximity <= minProximityDistance) {
-                        if (!getText(node).isEmpty()) {
+                        TextResult textResult = getText(node);
+                        if (textResult != null && textResult.type == TextResult.TEXT) {
                             closeProximitySelectedNode = node;
                             minProximityDistance = proximity;
                         }
@@ -903,23 +1156,42 @@ public class FloatingWidget {
             }
         }
     }
+    public static class TextResult {
+        public static int TEXT = 1;
+        public static int CONTENT_DESCRIPTION = 2;
+        public int type;
+        public String text;
 
-    private String getText(AccessibilityNodeInfo node) {
+        public TextResult(String text, int type) {
+            this.text = text;
+            this.type = type;
+        }
+
+        public TextResult() {
+            type = TEXT;
+            text = "";
+        }
+    }
+    private @Nullable TextResult getText(@NonNull AccessibilityNodeInfo node) {
         CharSequence nodeText = node.getText();
-        if (nodeText != null && !nodeText.toString().isEmpty()) {
-            return nodeText.toString();
+        if (nodeText != null) {
+            String nodeTextString = nodeText.toString();
+            if (!nodeTextString.trim().isEmpty())
+                return new TextResult(nodeText.toString(), TextResult.TEXT);
         }
 
         CharSequence contentDescription = node.getContentDescription();
         if (contentDescription != null) {
-            return contentDescription.toString();
+            String contentDescriptionString = contentDescription.toString();
+            if (!contentDescriptionString.trim().isEmpty())
+                return new TextResult(contentDescriptionString, TextResult.CONTENT_DESCRIPTION);
         }
-        return "";
+        return null;
     }
 
     private void freeSearch(AccessibilityNodeInfo node) {
-        String text = getText(node);
-        if (!text.isEmpty()) {
+        TextResult textResult = getText(node);
+        if (textResult != null) {
             Log.d("text", node.toString());
         }
         for (int i = 0; i < node.getChildCount(); i++) {
@@ -927,23 +1199,27 @@ public class FloatingWidget {
         }
     }
 
-    public void releaseResources(boolean skipResetWidgetLocation) {
+    private void clearMediaProjectionIdleWatchDog() {
+        if (mediaProjectionIdleHandler != null) {
+            mediaProjectionIdleHandler.removeCallbacks(mediaProjectionIdlePostRunnable);
+            mediaProjectionIdlePostRunnable = null;
+            mediaProjectionIdleHandler = null;
+        }
+    }
+
+    public void releaseResources() {
         if (systemNavigationButtonTapListener != null)
             hostingService.unregisterReceiver(systemNavigationButtonTapListener);
         hostingService.unregisterReceiver(configurationChangeReceiver);
         messageHandler.clearAllExcept(Constants.ACCESSIBILITY_SERVICE);
         floatingDismissWidget.clearResource();
-        if (!skipResetWidgetLocation)
-            widgetController.saveWidgetLocation(sharedPreferences);
+        widgetController.saveWidgetLocation(sharedPreferences);
         windowManager.removeView(overlayView);
         overlayView = null;
 
         saveTextToStorageIfNeeded(null);
 
-        if (mediaProjectionIdleHandler != null) {
-            mediaProjectionIdleHandler.removeCallbacks(mediaProjectionIdlePostRunnable);
-            mediaProjectionIdleHandler = null;
-        }
+        clearMediaProjectionIdleWatchDog();
         if (mediaProjection != null) {
             mediaProjection.stop();
         }
@@ -951,46 +1227,211 @@ public class FloatingWidget {
             notifyStateOnQuickTile(false);
     }
     private void onStopWidget() {
-        hostingService.onStopWidget(false);
+        hostingService.onStopWidget();
     }
 
-    static class NodeResult {
+    public static class NodeResult {
         public Rect bound;
         public String text;
+        public boolean isOCRText = false;
 
         NodeResult(@Nullable Rect bound, String text) {
             this.bound = bound;
             this.text = text;
         }
+
+        NodeResult(@Nullable Rect bound, String text, boolean isOCRText) {
+            this.bound = bound;
+            this.text = text;
+            this.isOCRText = isOCRText;
+        }
     }
     static abstract class NodeCapturedCallback {
-        abstract void onResult(NodeResult result);
+        abstract void onResult(@Nullable NodeResult result);
+
+        public void submit(@Nullable NodeResult result) {
+            new Handler(Looper.getMainLooper()).post(() -> onResult(result));
+        }
     }
-    private void getNodeResult(float x, float y, boolean shouldRetrieveText, NodeCapturedCallback resultCallback) {
+
+    public interface ImageRecognitionResult {
+        void onResult(boolean isIntercepted, @Nullable NodeResult result);
+    }
+
+    private String captureTappedWord(String wholeText, Parcelable[] characterBlocks, CoordinateF coordinate) {
+        int tappedIndex = -1;
+        for (int i = 0; i < characterBlocks.length; i++) {
+            if (characterBlocks[i] == null) continue;
+            RectF characterBound = (RectF) characterBlocks[i];
+            if (coordinate.x <= characterBound.right && coordinate.y <= characterBound.bottom) {
+                tappedIndex = i;
+                break;
+            }
+        }
+
+
+        if (tappedIndex != -1) {
+            int startIndex = 0;
+            for (int i = 0; i < wholeText.length(); i++) {
+                char character = wholeText.charAt(i);
+                boolean isSpaceChar = Character.isWhitespace(character) || character == '.' || character == ',';
+                if (isSpaceChar) {
+                    if (tappedIndex == i)
+                        return null;
+                    if (tappedIndex < i) {
+                        return wholeText.substring(startIndex, i);
+                    }
+                    startIndex = i + 1;
+                }
+            }
+
+            return wholeText.substring(startIndex);
+        }
+        return null;
+    }
+
+    private void getNodeResult(float x, float y, boolean isWebSearch, NodeCapturedCallback resultCallback) {
         isAccessibilityServiceBusy = true;
         new Thread(() -> {
             selectedNode = null;
             closeProximitySelectedNode = null;
+            imageNode = null;
             minArea = Integer.MAX_VALUE;
             minProximityDistance = Integer.MAX_VALUE;
             AccessibilityNodeInfo root = hostingService.getRootInActiveWindow();
 //            freeSearch(root);
             isInsideElement(root, (int) x, (int) y);
-            String extractedText = !shouldRetrieveText || selectedNode == null ? "" : getText(selectedNode).trim();
             Rect bounds = new Rect();
-            NodeResult result;
-            if (shouldRetrieveText && extractedText.isEmpty() && closeProximitySelectedNode != null) {
-                closeProximitySelectedNode.getBoundsInScreen(bounds);
-                extractedText = getText(closeProximitySelectedNode).trim();
-                result = new NodeResult(bounds, extractedText);
-            } else if (selectedNode != null) {
-                selectedNode.getBoundsInScreen(bounds);
-                result = new NodeResult(bounds, extractedText);
-            } else {
-                result = new NodeResult(null, "");
+            if (mode == Mode.CROPPED_IMAGE_CAPTURE && !isWebSearch) {
+                if (imageNode == null) {
+                    resultCallback.submit(null);
+                    return;
+                }
+                imageNode.getBoundsInScreen(bounds);
+                resultCallback.submit(new NodeResult(bounds, ""));
+                return;
             }
 
-            new Handler(Looper.getMainLooper()).post(() -> resultCallback.onResult(result));
+            TextResult selectedNodeResult = selectedNode == null ? null : getText(selectedNode);
+
+            if (textDetectionMode == TextDetectionMode.TEXT && !isWebSearch) {
+                if (
+                        (selectedNodeResult == null || selectedNodeResult.type == TextResult.CONTENT_DESCRIPTION)
+                        && closeProximitySelectedNode != null
+                ) {
+                    closeProximitySelectedNode.getBoundsInScreen(bounds);
+                    resultCallback.submit(new NodeResult(bounds, closeProximitySelectedNode.getText().toString()));
+                    return;
+                }
+                if (selectedNodeResult == null) {
+                    resultCallback.submit(null);
+                    return;
+                }
+                selectedNode.getBoundsInScreen(bounds);
+                resultCallback.submit(new NodeResult(bounds, selectedNodeResult.text));
+                return;
+            }
+
+
+            if (selectedNodeResult != null && selectedNodeResult.type == TextResult.TEXT
+                && selectedNode.getChildCount() == 0
+                    && (isWebSearch || textDetectionMode == TextDetectionMode.AUTO)
+            ) {
+                String[] classNameComponents = selectedNode.getClassName().toString().split("\\.");
+                String widgetType = classNameComponents[classNameComponents.length - 1].toLowerCase();
+                if (!widgetType.contains("image") &&
+                        //  buttons are portrait size could potentially has an image
+                        !(widgetType.contains("button") && bounds.height() > bounds.width())) {
+                    selectedNode.getBoundsInScreen(bounds);
+                    if (isWebSearch) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            List<String> availableData = selectedNode.getAvailableExtraData();
+                            boolean hasCharacterLocation = false;
+                            for (String extra : availableData) {
+                                if (extra.equals(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY)) {
+                                    hasCharacterLocation = true;
+                                    break;
+                                }
+                            }
+                            if (hasCharacterLocation) {
+                                Bundle args = new Bundle();
+                                args.putInt(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX, 0);
+                                args.putInt(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH, selectedNodeResult.text.length());
+                                selectedNode.refreshWithExtraData(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY, args);
+                                Parcelable[] characterBounds = selectedNode.getExtras().getParcelableArray(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY);
+                                assert characterBounds != null;
+                                String detectedWord = captureTappedWord(selectedNodeResult.text, characterBounds, new CoordinateF(x, y));
+                                resultCallback.submit(detectedWord == null ? null : new NodeResult(null, detectedWord));
+                                return;
+                            }
+                        }
+                    } else {
+                        resultCallback.submit(new NodeResult(bounds, selectedNodeResult.text));
+                    }
+                    return;
+                }
+            }
+
+            // can possibly be an image
+            if (isWebSearch || imageNode != null && (
+                    textDetectionMode == TextDetectionMode.TEXT_RECOGNITION
+                    || imageNode.getChildCount() == 0
+                    || closeProximitySelectedNode == null)) {
+                imageNode.getBoundsInScreen(bounds);
+                new Handler(Looper.getMainLooper()).post(() -> captureScreenshot(bounds,(int) x,(int) y, isWebSearch, (isIntercepted, result) -> {
+                    if (isWebSearch) {
+                        if (result != null && isIntercepted) {
+                            resultCallback.onResult(new NodeResult(null, result.text));
+                        } else
+                            resultCallback.onResult(null);
+                        return;
+                    }
+                    if (result != null) {
+                        if (isIntercepted || (
+                                textDetectionMode == TextDetectionMode.TEXT_RECOGNITION ||
+                                closeProximitySelectedNode == null
+                        )) {
+                            resultCallback.onResult(
+                                    new NodeResult(result.bound, result.text, true)
+                            );
+                            return;
+                        }
+                    }
+                    if (textDetectionMode == TextDetectionMode.TEXT_RECOGNITION) {
+                        resultCallback.submit(null);
+                        return;
+                    }
+                    if (closeProximitySelectedNode != null) {
+                        closeProximitySelectedNode.getBoundsInScreen(bounds);
+                        resultCallback.onResult(
+                                new NodeResult(bounds, closeProximitySelectedNode.getText().toString())
+                        );
+                        return;
+                    }
+                    if (selectedNodeResult != null) {
+                        selectedNode.getBoundsInScreen(bounds);
+                        resultCallback.onResult(
+                                new NodeResult(bounds, selectedNodeResult.text)
+                        );
+                    } else {
+                        resultCallback.onResult(null);
+                    }
+                }));
+                return;
+            }
+
+            if (textDetectionMode == TextDetectionMode.AUTO) {
+                if (closeProximitySelectedNode != null) {
+                    closeProximitySelectedNode.getBoundsInScreen(bounds);
+                    resultCallback.submit(new NodeResult(bounds, closeProximitySelectedNode.getText().toString()));
+                    return;
+                } else if (selectedNodeResult != null) {
+                    selectedNode.getBoundsInScreen(bounds);
+                    resultCallback.submit(new NodeResult(bounds, selectedNodeResult.text));
+                    return;
+                }
+            }
+            resultCallback.submit(null);
         }).start();
     }
 }

@@ -19,13 +19,10 @@ public class ThemeActivity extends AppCompatActivity {
         } else
             getWindow().setNavigationBarColor(getResources().getColor(R.color.darkPurple));
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getWindow().setStatusBarColor(Color.WHITE);
-            getWindow().getDecorView().setSystemUiVisibility(
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0) |
-                            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-            );
-        } else
-            getWindow().setStatusBarColor(getResources().getColor(R.color.darkPurple));
+        getWindow().setStatusBarColor(Color.WHITE);
+        getWindow().getDecorView().setSystemUiVisibility(
+                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0) |
+                        View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        );
     }
 }

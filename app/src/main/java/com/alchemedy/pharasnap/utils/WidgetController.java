@@ -8,6 +8,7 @@ import android.content.res.Resources;
 import android.graphics.Insets;
 import android.os.Build;
 import android.provider.Settings;
+import android.util.DisplayMetrics;
 import android.util.Size;
 import android.view.Gravity;
 import android.view.View;
@@ -53,10 +54,10 @@ public class WidgetController {
         }
     }
      class ButtonPosition {
-        ImageButton button;
+        View button;
         CoordinateF position;
-        ButtonPosition(int id) {
-            this.button = overlayView.findViewById(id);
+        ButtonPosition(View v) {
+            this.button = v;
         }
 
          public void setPosition(int translationX, int translationY) {
@@ -72,9 +73,11 @@ public class WidgetController {
     private final CustomOverlayView rootOverlay;
     private final WindowManager.LayoutParams params;
     private Size buttonContainerSize;
+    private boolean isWidgetLeftOriented;
     private final ViewGroup buttonContainer;
     private ButtonPosition[] buttonPositions;
     private static final int duration = 150;
+    private int lastKnownDownLevelY;
 
     public WidgetController(Context context, WindowManager windowManager, WindowManager.LayoutParams params, View overlayView) {
         this.overlayView = overlayView;
@@ -90,73 +93,105 @@ public class WidgetController {
         if (!shouldExpand)
             overlayView.findViewById(R.id.text_hint).setVisibility(View.GONE);
         enableButton.setImageResource(shouldExpand ? R.drawable.collapse : R.drawable.copy);
-        enableButton.setBackgroundResource(shouldExpand ? R.drawable.yellow_color_circle : R.drawable.green_circle);
+        enableButton.setBackgroundResource(shouldExpand ? R.drawable.yellow_color_circle : R.drawable.primary_blue_circle);
 
+        ViewGroup buttonContainer = overlayView.findViewById(R.id.buttonContainer);
+        buttonPositions = new ButtonPosition[buttonContainer.getChildCount() - 1];
+        for (int i = 0; i < buttonContainer.getChildCount() - 1; i++) {
+            buttonPositions[i] = new ButtonPosition(buttonContainer.getChildAt(i));
+        }
+
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, Context.MODE_PRIVATE);
+        isWidgetLeftOriented = sharedPreferences.getBoolean(Constants.IS_WIDGET_LEFT_ORIENTED, false);
+
+        overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
+
+        if (shouldExpand) {
+            enableButton.isExpanded = true;
+            rootOverlay.enableTouchListener();
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+            buttonContainer.setTranslationY(widgetLocationCoordinate.y);
+        } else {
+            params.y = widgetLocationCoordinate.y;
+        }
+
+        configureWidgetOrientation(shouldExpand, false);
+    }
+
+    public void hotReloadWidgetOrientation(boolean isWidgetLeftOriented) {
+        if (isWidgetLeftOriented == this.isWidgetLeftOriented) return;
+        this.isWidgetLeftOriented = isWidgetLeftOriented;
+        configureWidgetOrientation(enableButton.isExpanded, true);
+    }
+
+    public void configureWidgetOrientation(boolean shouldExpand, boolean shouldUpdateParams) {
+        enableButton.isLeftOriented = isWidgetLeftOriented;
         Resources resources = context.getResources();
-        buttonPositions = new ButtonPosition[] {
-                new ButtonPosition(R.id.list),
-                new ButtonPosition(R.id.toggle),
-                new ButtonPosition(R.id.eraser),
-                new ButtonPosition(R.id.stop),
-        };
-
-        int startAngle = 15;
+        int startAngle = 0;
         int sweepAngle = (180 - (startAngle * 2));
-        int unitAngle = sweepAngle / (buttonPositions.length - 1);
 
         int radius = resources.getDimensionPixelSize(R.dimen.button_size) + resources.getDimensionPixelSize(R.dimen.space_between_buttons);
+        int sign = isWidgetLeftOriented ? 1 : -1;
+        int unitAngle = sweepAngle / (buttonPositions.length - 1);
+
         for (int index = 0; index < buttonPositions.length; index++) {
             ButtonPosition buttonPosition = buttonPositions[index];
             int currentAngle = startAngle + (index * unitAngle);
-            buttonPosition.setPosition(
-                    (int) -(Math.sin(Math.toRadians(currentAngle)) * radius),
-                    (int) -(Math.cos(Math.toRadians(currentAngle)) * radius)
-            );
+            FrameLayout.LayoutParams buttonLayoutParam = (FrameLayout.LayoutParams) buttonPosition.button.getLayoutParams();
+            buttonLayoutParam.gravity = Gravity.CENTER_VERTICAL | (isWidgetLeftOriented ? Gravity.START : Gravity.END);
+            buttonPosition.button.setLayoutParams(buttonLayoutParam);
+                buttonPosition.setPosition(
+                        (int) (sign * Math.sin(Math.toRadians(currentAngle)) * radius),
+                        (int) -(Math.cos(Math.toRadians(currentAngle)) * radius)
+                );
             if (shouldExpand) {
                 buttonPosition.button.setTranslationX(buttonPosition.position.x);
                 buttonPosition.button.setTranslationY(buttonPosition.position.y);
             } else
                 buttonPosition.button.setVisibility(View.GONE);
         }
-        buttonContainerSize = new Size(
-                (int) (resources.getDimensionPixelSize(R.dimen.button_size) - buttonPositions[1].position.x),
-                (int) (resources.getDimensionPixelSize(R.dimen.button_size) - buttonPositions[0].position.y
-                                + buttonPositions[buttonPositions.length - 1].position.y)
-        );
-        overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
-        if (shouldExpand) {
-            enableButton.isExpanded = true;
-            rootOverlay.enableTouchListener();
-            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
 
-            FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
+        FrameLayout.LayoutParams enableButtonParams = (FrameLayout.LayoutParams) enableButton.getLayoutParams();
+        enableButtonParams.gravity = Gravity.CENTER_VERTICAL | (isWidgetLeftOriented ? Gravity.START : Gravity.END);
+        enableButton.setLayoutParams(enableButtonParams);
+        buttonContainerSize = new Size(
+                (int) (resources.getDimensionPixelSize(R.dimen.button_size) + Math.abs(buttonPositions[2].position.x)),
+                (int) (resources.getDimensionPixelSize(R.dimen.button_size) + Math.abs(buttonPositions[0].position.y)
+                        + Math.abs(buttonPositions[buttonPositions.length - 1].position.y))
+        );
+
+        FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
+        buttonContainerLayoutParams.gravity = (isWidgetLeftOriented ? Gravity.START : Gravity.END) | Gravity.CENTER_VERTICAL;
+        if (shouldExpand) {
             buttonContainerLayoutParams.height = buttonContainerSize.getHeight();
             buttonContainerLayoutParams.width = buttonContainerSize.getWidth();
             configureOverlayDimensions(buttonContainerLayoutParams, true, false, false);
             buttonContainer.setLayoutParams(buttonContainerLayoutParams);
-            buttonContainer.setTranslationX(-widgetLocationCoordinate.x);
-            buttonContainer.setTranslationY(widgetLocationCoordinate.y);
         } else {
-            params.y = widgetLocationCoordinate.y;
+            params.gravity = Gravity.CENTER_VERTICAL | (isWidgetLeftOriented ? Gravity.START : Gravity.END);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 // if initially if on landscape while navigation bar is on right side
                 Insets navigationBarInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.navigationBars());
-                if (navigationBarInset.right > 0) {
-                    landscapeNavigationBarOffset = navigationBarInset.right;
+                if ((isWidgetLeftOriented && navigationBarInset.left > 0) || (!isWidgetLeftOriented && navigationBarInset.right > 0)) {
+                    landscapeNavigationBarOffset = Math.max(navigationBarInset.left, navigationBarInset.right);
                     params.x = landscapeNavigationBarOffset;
                 }
             }
-            params.x += widgetLocationCoordinate.x;
+            if (shouldUpdateParams)
+                windowManager.updateViewLayout(overlayView, params);
+        }
+    }
+
+    public void updateLastDownCoordinate() {
+        if (enableButton.isExpanded) {
+            lastKnownDownLevelY = (int) buttonContainer.getTranslationY();
+        } else {
+            lastKnownDownLevelY = params.y;
         }
     }
 
     public void saveWidgetLocation(SharedPreferences sharedPreferences) {
-        WidgetLocationCoordinate widgetLocation;
-        if (enableButton.isExpanded) {
-            widgetLocation = new WidgetLocationCoordinate((int) -buttonContainer.getTranslationX(), (int) buttonContainer.getTranslationY(), context);
-        } else {
-            widgetLocation = new WidgetLocationCoordinate(params.x - landscapeNavigationBarOffset, params.y, context);
-        }
+        WidgetLocationCoordinate widgetLocation = new WidgetLocationCoordinate(lastKnownDownLevelY, context);
         if (widgetLocation.isSameAsDefault()) {
             sharedPreferences.edit().remove(Constants.WIDGET_LAST_LOCATION_INFO).apply();
         } else {
@@ -182,20 +217,21 @@ public class WidgetController {
                     }
                     landscapeNavigationBarOffset = 0;
                 } else {
-                    int navigationBarSize = navigationBarInsets.left + navigationBarInsets.right;
+                    int navigationBarSize = Math.max(navigationBarInsets.left, navigationBarInsets.right);
                     params.width = windowManager.getCurrentWindowMetrics().getBounds().width() - navigationBarSize;
                     params.height = WindowManager.LayoutParams.MATCH_PARENT;
                     buttonContainerParams.topMargin = 0;
                     buttonContainerParams.bottomMargin = 0;
                     if (shouldResetPosition) {
-                        if (navigationBarInsets.right == 0) {
-                            int insetRight = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.displayCutout()).right;
-                            buttonContainer.setTranslationX(-insetRight);
-                        } else
-                            buttonContainer.setTranslationX(0);
-                        buttonContainer.setTranslationY(0);
+                        Insets horizontalCutoutInset = windowManager.getCurrentWindowMetrics().getWindowInsets().getInsets(WindowInsets.Type.displayCutout());
+                        if (navigationBarInsets.right == 0 && !isWidgetLeftOriented) {
+                            buttonContainer.setTranslationX(-horizontalCutoutInset.right);
+                        } if (navigationBarInsets.left == 0 && isWidgetLeftOriented)
+                            buttonContainer.setTranslationX(horizontalCutoutInset.left);
+                        else
+                            buttonContainer.setTranslationY(0);
                     }
-                    landscapeNavigationBarOffset = Math.max(navigationBarInsets.right, 0);
+                    landscapeNavigationBarOffset = isWidgetLeftOriented ? navigationBarInsets.left : navigationBarInsets.right;
                 }
                 if (shouldUpdateLayout)
                     buttonContainer.setLayoutParams(buttonContainerParams);
@@ -240,7 +276,8 @@ public class WidgetController {
 
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
         buttonContainer.setTranslationY(params.y);
-        buttonContainer.setTranslationX(-params.x + landscapeNavigationBarOffset);
+        float proposedTranslationX = (isWidgetLeftOriented ? 1 : -1) * (params.x - landscapeNavigationBarOffset);
+
         params.y = 0;
         params.x = 0;
         windowManager.updateViewLayout(overlayView, params);
@@ -248,6 +285,18 @@ public class WidgetController {
         buttonContainerLayoutParams.width = buttonContainerSize.getWidth();
         buttonContainer.setLayoutParams(buttonContainerLayoutParams);
         ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(duration);
+        int screenWidth;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+            screenWidth = windowManager.getCurrentWindowMetrics().getBounds().width();
+        else {
+            DisplayMetrics displayMetrics = new DisplayMetrics();
+            windowManager.getDefaultDisplay().getMetrics(displayMetrics);
+            screenWidth = displayMetrics.widthPixels;
+        }
+        if ((Math.abs(proposedTranslationX) + buttonContainerSize.getWidth()) > screenWidth)
+            proposedTranslationX = (Math.signum(proposedTranslationX) * (screenWidth - buttonContainerSize.getWidth()));
+
+        buttonContainer.setTranslationX(proposedTranslationX);
         animator.addUpdateListener(valueAnimator -> {
             double fraction = valueAnimator.getAnimatedFraction();
             for (ButtonPosition buttonPosition : buttonPositions) {
@@ -262,7 +311,7 @@ public class WidgetController {
     public void close() {
         rootOverlay.disableTouchListener();
         enableButton.isExpanded = false;
-        FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) overlayView.findViewById(R.id.buttonContainer).getLayoutParams();
+        FrameLayout.LayoutParams buttonContainerLayoutParams = (FrameLayout.LayoutParams) buttonContainer.getLayoutParams();
         ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(duration);
         animator.addUpdateListener(valueAnimator -> {
             double fraction = 1 - valueAnimator.getAnimatedFraction();
@@ -272,7 +321,7 @@ public class WidgetController {
             }
             if (fraction == 0) {
                 enableButton.setImageResource(R.drawable.copy);
-                enableButton.setBackgroundResource(R.drawable.green_circle);
+                enableButton.setBackgroundResource(R.drawable.primary_blue_circle);
                 for(ButtonPosition buttonPosition: buttonPositions)
                     buttonPosition.button.setVisibility(View.GONE);
                 buttonContainerLayoutParams.width = FrameLayout.LayoutParams.WRAP_CONTENT;
@@ -283,13 +332,13 @@ public class WidgetController {
                 }
 
                 params.y = (int) buttonContainer.getTranslationY();
-                params.x = (int) -buttonContainer.getTranslationX() + landscapeNavigationBarOffset;
+                params.x = (int) ((isWidgetLeftOriented ? 1 : -1) * buttonContainer.getTranslationX()) + landscapeNavigationBarOffset;
                 buttonContainer.setTranslationY(0);
                 buttonContainer.setTranslationX(0);
                 buttonContainer.setLayoutParams(buttonContainerLayoutParams);
                 params.height = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.width = WindowManager.LayoutParams.WRAP_CONTENT;
-                params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
+                params.gravity = Gravity.CENTER_VERTICAL | (isWidgetLeftOriented ? Gravity.START : Gravity.END);
                 params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
                 windowManager.updateViewLayout(overlayView, params);
             }

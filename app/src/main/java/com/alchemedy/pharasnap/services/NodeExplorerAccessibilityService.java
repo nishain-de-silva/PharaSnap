@@ -9,9 +9,11 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.SystemClock;
 import android.service.quicksettings.Tile;
+import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
+import com.alchemedy.pharasnap.helper.LongPressButtonTriggerInfo;
 import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.utils.FloatingWidget;
@@ -22,11 +24,11 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     public static boolean startWidgetAfterAccessibilityLaunch = false;
     private long previousStartTime;
     boolean isCapturingLongPressingButton;
-    String longPressButtonTargetContentDescription;
+    LongPressButtonTriggerInfo longPressButtonTrigger;
 
-    public void onStopWidget(boolean skipResetWidgetLocation) {
+    public void onStopWidget() {
         if (floatingWidget != null) {
-            floatingWidget.releaseResources(skipResetWidgetLocation);
+            floatingWidget.releaseResources();
             floatingWidget = null;
             FloatingWidget.isWidgetIsShowing = false;
             startWidgetAfterAccessibilityLaunch = false;
@@ -43,15 +45,20 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
-        // when this service is created at phone-reboot or re-created by system my memory cleanup
-        // it will check the current stale active state and turn it off.
+        SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
+        String longPressButtonTriggerJSON = sharedPreferences.getString(Constants.NAVIGATION_LONG_PRESS.ACTIVE_BUTTON, null);
         AccessibilityServiceInfo serviceInfo = getServiceInfo();
         serviceInfo.eventTypes = AccessibilityEvent.TYPE_WINDOWS_CHANGED;
+        if (longPressButtonTriggerJSON != null) {
+            longPressButtonTrigger = new LongPressButtonTriggerInfo(longPressButtonTriggerJSON);
+            serviceInfo.eventTypes |= AccessibilityEvent.TYPE_VIEW_LONG_CLICKED;
+        }
         setServiceInfo(serviceInfo);
 
         messageHandler = new MessageHandler(this);
-        SharedPreferences sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCE_KEY, MODE_PRIVATE);
-        longPressButtonTargetContentDescription = sharedPreferences.getString(Constants.NAVIGATION_LONG_PRESS.ACTIVE_BUTTON, null);
+
+        // when this service is created at phone-reboot or re-created by system my memory cleanup
+        // it will check the current stale active state and turn it off.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sharedPreferences.getBoolean(Constants.TILE_ACTIVE_KEY, false)) {
             ShortcutTileLauncher.expectedChange = Tile.STATE_INACTIVE;
             ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
@@ -64,34 +71,14 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 .registerReceiver(new BroadcastReceiver() {
                     @Override
                     public void onReceive(Context context, Intent intent) {
-                        if (intent.hasExtra(Constants.NAVIGATION_LONG_PRESS.CAPTURE_SESSION)) {
-                            int captureStatus = intent.getIntExtra(Constants.NAVIGATION_LONG_PRESS.CAPTURE_SESSION, 0);
-                            if (captureStatus == Constants.NAVIGATION_LONG_PRESS.START_CAPTURE) {
-                                AccessibilityServiceInfo updatedServiceInfo = getServiceInfo();
-                                if((updatedServiceInfo.eventTypes
-                                        & AccessibilityEvent.TYPE_VIEW_LONG_CLICKED) != AccessibilityEvent.TYPE_VIEW_LONG_CLICKED) {
-                                    updatedServiceInfo.eventTypes |= AccessibilityEvent.TYPE_VIEW_LONG_CLICKED;
-                                    setServiceInfo(updatedServiceInfo);
-                                }
-                                isCapturingLongPressingButton = true;
-                            } else {
-                                if (captureStatus == Constants.NAVIGATION_LONG_PRESS.DISABLE_BUTTON) {
-                                    longPressButtonTargetContentDescription = null;
-                                    AccessibilityServiceInfo updatedServiceInfo = getServiceInfo();
-                                    updatedServiceInfo.eventTypes &= ~AccessibilityEvent.TYPE_VIEW_LONG_CLICKED;
-                                    setServiceInfo(updatedServiceInfo);
-                                }
-                                isCapturingLongPressingButton = false;
-                            }
-                            return;
-                        }
+                        if (handleMessagesFromSettings(intent)) return;
                         boolean shouldSkipNotify = intent.hasExtra(Constants.SKIP_NOTIFY_QUICK_TILE);
                         if (intent.hasExtra(Constants.STOP_WIDGET)) {
                             if (floatingWidget != null) {
                                 if (shouldSkipNotify)
                                     floatingWidget.skipNotifyOnWidgetStop = true;
                                 messageHandler.sendBroadcast(new Intent(Constants.WIDGET_IS_STOPPING));
-                                onStopWidget(false);
+                                onStopWidget();
                             }
                         } else
                             showFloatingWidgetSafety(shouldSkipNotify);
@@ -99,11 +86,41 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                 }, Constants.ACCESSIBILITY_SERVICE);
     }
 
+    private boolean handleMessagesFromSettings(Intent intent) {
+        if (intent.hasExtra(Constants.NAVIGATION_LONG_PRESS.CAPTURE_SESSION)) {
+            int captureStatus = intent.getIntExtra(Constants.NAVIGATION_LONG_PRESS.CAPTURE_SESSION, 0);
+            if (captureStatus == Constants.NAVIGATION_LONG_PRESS.START_CAPTURE) {
+                AccessibilityServiceInfo updatedServiceInfo = getServiceInfo();
+                if((updatedServiceInfo.eventTypes
+                        & AccessibilityEvent.TYPE_VIEW_LONG_CLICKED) != AccessibilityEvent.TYPE_VIEW_LONG_CLICKED) {
+                    updatedServiceInfo.eventTypes |= AccessibilityEvent.TYPE_VIEW_LONG_CLICKED;
+                    setServiceInfo(updatedServiceInfo);
+                }
+                isCapturingLongPressingButton = true;
+            } else {
+                if (captureStatus == Constants.NAVIGATION_LONG_PRESS.DISABLE_BUTTON) {
+                    longPressButtonTrigger = null;
+                    AccessibilityServiceInfo updatedServiceInfo = getServiceInfo();
+                    updatedServiceInfo.eventTypes &= ~AccessibilityEvent.TYPE_VIEW_LONG_CLICKED;
+                    setServiceInfo(updatedServiceInfo);
+                }
+                isCapturingLongPressingButton = false;
+            }
+            return true;
+        }
+
+        if (intent.hasExtra(Constants.IS_WIDGET_LEFT_ORIENTED) && floatingWidget != null) {
+            floatingWidget.changeWidgetPositionOrientation(intent.getBooleanExtra(Constants.IS_WIDGET_LEFT_ORIENTED, false));
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
         messageHandler.unregisterReceiver(Constants.ACCESSIBILITY_SERVICE);
-        onStopWidget(false);
+        onStopWidget();
     }
 
     @Override
@@ -119,6 +136,8 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             if (isCapturingLongPressingButton) {
                 messageHandler.sendBroadcast(new Intent(Constants.NAVIGATION_LONG_PRESS.CAPTURE_SESSION)
                         .putExtra(Constants.NAVIGATION_LONG_PRESS.NEW_BUTTON_PAYLOAD, ""));
+                Toast.makeText(this, "Button assignment canceled", Toast.LENGTH_SHORT).show();
+                isCapturingLongPressingButton = false;
             }
             AccessibilityServiceInfo serviceInfo = getServiceInfo();
             serviceInfo.eventTypes |= AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
@@ -126,22 +145,19 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             previousStartTime = SystemClock.elapsedRealtime();
         } else {
             if (isCapturingLongPressingButton) {
-                if ("com.android.systemui".contentEquals(accessibilityEvent.getPackageName())) {
-                    CharSequence contentDescription = accessibilityEvent.getContentDescription();
-                    if (contentDescription != null && contentDescription.length() > 0) {
-                        messageHandler.sendBroadcast(new Intent(Constants.NAVIGATION_LONG_PRESS.CAPTURE_SESSION)
-                                .putExtra(Constants.NAVIGATION_LONG_PRESS.NEW_BUTTON_PAYLOAD, accessibilityEvent.getContentDescription().toString()));
-                        longPressButtonTargetContentDescription = contentDescription.toString();
-                        isCapturingLongPressingButton = false;
-                        return;
-                    }
-                }
-                Toast.makeText(this, "That does not seemed to be a system button!", Toast.LENGTH_SHORT).show();
-            } else if (
-                    longPressButtonTargetContentDescription != null &&
-                    "com.android.systemui".contentEquals(accessibilityEvent.getPackageName())) {
                 CharSequence contentDescription = accessibilityEvent.getContentDescription();
-                if (contentDescription != null && longPressButtonTargetContentDescription.contentEquals(contentDescription)) {
+                if (contentDescription != null && contentDescription.length() > 0) {
+                    longPressButtonTrigger = new LongPressButtonTriggerInfo(contentDescription.toString(), accessibilityEvent.getPackageName().toString());
+                    messageHandler.sendBroadcast(new Intent(Constants.NAVIGATION_LONG_PRESS.CAPTURE_SESSION)
+                            .putExtra(Constants.NAVIGATION_LONG_PRESS.NEW_BUTTON_PAYLOAD, longPressButtonTrigger.toJSONString()));
+                    isCapturingLongPressingButton = false;
+                } else
+                    Toast.makeText(this, "That does not seems to be a system navigation button", Toast.LENGTH_SHORT).show();
+            } else if (
+                    longPressButtonTrigger != null &&
+                            longPressButtonTrigger.systemPackageName.contentEquals(accessibilityEvent.getPackageName())) {
+                CharSequence contentDescription = accessibilityEvent.getContentDescription();
+                if (contentDescription != null && longPressButtonTrigger.contentDescription.contentEquals(contentDescription)) {
                     showFloatingWidgetSafety(false);
                 }
             }

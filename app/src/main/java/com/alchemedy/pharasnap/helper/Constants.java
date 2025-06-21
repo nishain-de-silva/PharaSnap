@@ -16,13 +16,16 @@ public class Constants {
     public static final String SHOULD_CLOSE_MODAL = "ShouldCloseModal";
     public static final String MEDIA_PROJECTION_DATA = "mediaProjectionData";
     public static final String WIDGET_LAST_LOCATION_INFO = "widgetLastLocationInfo";
+    public static final String IS_WIDGET_LEFT_ORIENTED = "isWidgetLeftOriented";
+    public static final String CURRENT_CAPTURE_MODE = "currentCaptureMode";
+    public static final String REQUEST_STORAGE_PERMISSION = "requestStoragePermission";
+    public static final String SCREEN_CAPTURE_INTENT = "screenCaptureIntent";
     public static class NAVIGATION_LONG_PRESS {
         public static final String CAPTURE_SESSION = "sessionToUpdateLongButtonPressTrigger";
         public static final int CANCEL_CAPTURE = 2;
         public static final int START_CAPTURE = 1;
         public static final int DISABLE_BUTTON = 3;
         public static final String NEW_BUTTON_PAYLOAD = "capturedNewLongPressButton";
-        public static final String LONG_PRESS_BUTTON_TRIGGER_DISABLED = "longPressButtonUpdated";
         public static final String ACTIVE_BUTTON = "activeLongPressButtonTrigger";
     }
 

@@ -178,7 +178,7 @@ public class WalkthroughSlider extends LinearLayout {
     }
 
     public void onActivityResume() {
-        if (list.size() > 0
+        if (!list.isEmpty()
                 && currentIndex > -1
                 && currentIndex < list.size()
         ) {

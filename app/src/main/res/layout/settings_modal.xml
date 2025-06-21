@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal">
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:text="Text Capture Mode"
+        android:layout_marginBottom="12dp"
+        android:textColor="@color/darkPurple"
+        android:textSize="18sp"
+        />
+    <com.alchemedy.pharasnap.widgets.TabSelector
+        android:id="@+id/mode_tab_selector"
+        android:layout_width="match_parent"
+        android:background="@drawable/tab_selector_background"
+        android:layout_height="wrap_content"
+        />
+        <androidx.appcompat.widget.AppCompatTextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:text="This setting will reset after the widget is closed"
+            android:textColor="@color/darkPurple"
+            />
+</LinearLayout>

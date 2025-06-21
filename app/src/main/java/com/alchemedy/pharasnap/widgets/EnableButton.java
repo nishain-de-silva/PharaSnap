@@ -1,6 +1,7 @@
 package com.alchemedy.pharasnap.widgets;
 
 import android.content.Context;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -8,6 +9,7 @@ import android.view.WindowManager;
 
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.CoordinateF;
+
 
 public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton {
 
@@ -20,6 +22,7 @@ public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton
     WindowManager.LayoutParams params;
     public boolean isExpanded = false;
     View overlayView;
+    public boolean isLeftOriented;
     WindowManager windowManager;
     public EnableButton(Context context) {
         super(context);
@@ -55,7 +58,7 @@ public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton
                         buttonContainer.setTranslationX(initialX + (x - enableButtonDownCoordinate.x));
                     } else {
                         params.y = (int) (initialY + (y - enableButtonDownCoordinate.y));
-                        params.x = (int) (initialX + (enableButtonDownCoordinate.x - x));
+                        params.x = (int) (initialX + (isLeftOriented ? (x - enableButtonDownCoordinate.x) : (enableButtonDownCoordinate.x - x)));
                         windowManager.updateViewLayout(overlayView, params);
                     }
                     if (gestureMode == GESTURE_UNDETERMINED) {
@@ -72,7 +75,7 @@ public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton
                         onTapListener.onTap(new CoordinateF(x, y));
                         gestureMode = GESTURE_TAP;
                         performClick();
-                    } else if (!isExpanded)
+                    } else
                         onTapListener.onRelease();
                     return true;
                 } else if (action == MotionEvent.ACTION_DOWN) {

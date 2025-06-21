@@ -5,16 +5,18 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
-import android.widget.TextView;
+import android.view.WindowInsets;
+import android.view.WindowManager;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
-import com.alchemedy.pharasnap.BuildConfig;
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.MessageHandler;
@@ -66,6 +68,8 @@ public class MainActivity extends ThemeActivity {
         ).onDrawGraphics(R.layout.tutorial_graphic_controls));
         pages.add(new WalkthroughSlider.PageContent(R.string.text_copy_tutorial, "Copy Text selection")
                 .onDrawGraphics(R.layout.tutorial_graphic_text_selection));
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.R)
+            pages.add(new WalkthroughSlider.PageContent(R.string.media_projection_request_explanation, "Media Projection Requests"));
         pages.add(
                 new WalkthroughSlider.PageContent(R.string.recent_items_tutorial, "Recent Items")
                         .onDrawGraphics(R.layout.tutorial_graphic_recent_items)
@@ -95,11 +99,11 @@ public class MainActivity extends ThemeActivity {
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("Are you sure ?")
                             .setMessage(R.string.add_tile_requirement)
-                            .setPositiveButton("Skip anyway", (dialogInterface, i) -> {
+                            .setPositiveButton("No wait", (dialogInterface, i) -> dialogInterface.dismiss())
+                            .setNegativeButton("Skip anyway", (dialogInterface, i) -> {
                                 walkthroughSlider.changePage(true, true);
                                 dialogInterface.dismiss();
                             })
-                            .setNegativeButton("No wait", (dialogInterface, i) -> dialogInterface.dismiss())
                             .show();
                     return true;
                 }
@@ -130,10 +134,10 @@ public class MainActivity extends ThemeActivity {
         View launchButton = findViewById(R.id.launch_widget);
         launchButton.setOnClickListener(v -> WidgetController.launchWidget(this, true, false));
         findViewById(R.id.troubleshoot).setOnClickListener(v -> startActivity(new Intent(this, TroubleshootActivity.class)));
-        findViewById(R.id.preferences).setOnClickListener(v -> {
-            if (AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this))
-                startActivity(new Intent(this, PreferenceActivity.class));
-            else
+        findViewById(R.id.settings).setOnClickListener(v -> {
+            if (AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this)) {
+                startActivity(new Intent(this, SettingsActivity.class));
+            } else
                 new AlertDialog.Builder(MainActivity.this)
                         .setTitle("Grant Accessibility Access")
                         .setMessage(R.string.accessibility_enable_alert_description)
@@ -150,7 +154,6 @@ public class MainActivity extends ThemeActivity {
         });
         findViewById(R.id.rate_app).setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + getPackageName()))));
     }
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -169,7 +172,7 @@ public class MainActivity extends ThemeActivity {
         if(needToDisplayInitialWalkthrough) {
             addTutorials(false);
         }
-        if (pages.size() > 0)
+        if (!pages.isEmpty())
             showWalkthroughSlider();
         else
             showMainMenu();
