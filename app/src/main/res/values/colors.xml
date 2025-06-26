@@ -4,6 +4,7 @@
     <color name="primaryGreen">#58DF10</color>
     <color name="primaryRed">#F65830</color>
     <color name="darkPurple">#0D203B</color>
+    <color name="backdrop">#87000000</color>
     <color name="textSelection">#7914C6FE</color>
     <color name="primaryBlue">#14C6FE</color>
     <color name="modalContentBackground">#5BFFFFFF</color>

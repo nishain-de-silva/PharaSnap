@@ -158,7 +158,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                             longPressButtonTrigger.systemPackageName.contentEquals(accessibilityEvent.getPackageName())) {
                 CharSequence contentDescription = accessibilityEvent.getContentDescription();
                 if (contentDescription != null && longPressButtonTrigger.contentDescription.contentEquals(contentDescription)) {
-                    showFloatingWidgetSafety(false);
+                    showFloatingWidgetSafety(true);
                 }
             }
         }

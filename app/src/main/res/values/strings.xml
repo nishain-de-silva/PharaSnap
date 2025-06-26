@@ -7,7 +7,7 @@
     <string name="app_shortcut_short_label">Launch widget</string>
     <string name="app_shortcut_long_label">Launch widget to copy text on screen</string>
     <string name="text_selection_modal_title">Change text selection</string>
-    <string name="settings_modal_title">Settings</string>
+    <string name="quick_settings_modal_title">Quick Settings</string>
     <string name="entry_list_modal_title">Recent items</string>
     <string name="change_text_modal_title">Edit text</string>
     <string name="accessibility_enable_alert_description">You must provide PharaSnap access to use Accessibility service to read text and image content on the screen. Go setting and select PharaSnap to enable accessibility service</string>
@@ -47,10 +47,10 @@ You can switch between the two modes with left-most button on the widget</string
     <string name="long_press_button_changer_default_label">Assign button</string>
     <string-array name="text_mode_descriptions">
         <item>Auto Switch</item>
-        <item>(Default) Smartly detect identify the tap element and use text image recognition if required.</item>
+        <item>(Default) Smartly detects type of the tapped element and use text image recognition if required or capture the text provided by accessibility.</item>
         <item>Text Label</item>
-        <item>Capture text on non-image elements such as paragraphs, buttons and labels .etc</item>
+        <item>Capture text provided only by accessibility on non-image text elements without using OCR</item>
         <item>Image text recognition</item>
-        <item>Recognize and capture text on images. Only supports recognition of latin characters (including English)</item>
+        <item>Recognize and capture text on images only. Only supports recognition of latin characters (including English)</item>
     </string-array>
 </resources>

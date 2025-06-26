@@ -10,42 +10,38 @@ import android.widget.TextView;
 import com.alchemedy.pharasnap.R;
 
 public class Modal {
-    View overlayView;
+    ViewGroup overlayView;
+    private ViewGroup modalWindow;
     private ModalCallback currentModalCallback;
     public abstract static class ModalCallback {
 
         public void onBeforeModalShown(ViewGroup inflatedView) {}
         public void onOpened(ViewGroup inflatedView, boolean isModalAlreadyOpened) {}
 
-        public void onHeaderBackPressed(ViewGroup modalWindow) {
-            handleDefaultClose(modalWindow);
+        public void onHeaderBackPressed(Modal modal) {
+            handleDefaultClose(modal);
         }
 
         public void onModalClosed() {}
     }
 
-    static void handleDefaultClose(ViewGroup modalWindow) {
-        View container = modalWindow.findViewById(R.id.modal_container);
+    static void handleDefaultClose(Modal modal) {
+        View container = modal.modalWindow.findViewById(R.id.modal_container);
         ValueAnimator animator = ValueAnimator.ofFloat(0, container.getHeight());
         animator.addUpdateListener(valueAnimator -> {
             float amount = (float) valueAnimator.getAnimatedValue();
             container.setTranslationY(amount);
             if (valueAnimator.getAnimatedFraction() == 1) {
-                modalWindow.setVisibility(View.GONE);
+                modal.overlayView.removeView(modal.modalWindow);
+                modal.modalWindow = null;
             }
         });
         animator.setDuration(150);
         animator.start();
     }
 
-    public Modal(View rootView) {
+    public Modal(ViewGroup rootView) {
         overlayView = rootView;
-        ViewGroup modalRootWindow = overlayView.findViewById(R.id.modal_window);
-        modalRootWindow.setOnClickListener(v -> {
-            currentModalCallback.onModalClosed();
-            currentModalCallback = null;
-            handleDefaultClose(modalRootWindow);
-        });
     }
 
     public enum ModalType {
@@ -55,31 +51,25 @@ public class Modal {
     }
 
     public void closeModal() {
-        ViewGroup modalWindow = overlayView.findViewById(R.id.modal_window);
-        if(modalWindow.getVisibility() == View.VISIBLE) {
+        if(modalWindow != null) {
             if (currentModalCallback != null) {
                 currentModalCallback.onModalClosed();
                 currentModalCallback = null;
             }
-            handleDefaultClose(modalWindow);
+            handleDefaultClose(this);
         }
     }
 
     public void reLayout() {
+        if (modalWindow == null) return;
         int topPadding = overlayView.getContext().getResources().getDimensionPixelSize(R.dimen.modal_top_margin);
-        ViewGroup modalWindow = overlayView.findViewById(R.id.modal_window);
-        if(modalWindow.getVisibility() == View.VISIBLE) {
-            modalWindow.setPadding(0, topPadding, 0, 0);
-        }
+        modalWindow.setPadding(0, topPadding, 0, 0);
     }
 
     public boolean handleSystemGoBack() {
-        ViewGroup modalRootWindow = overlayView.findViewById(R.id.modal_window);
-        if(modalRootWindow.getVisibility() == View.VISIBLE) {
-            currentModalCallback.onHeaderBackPressed(modalRootWindow);
-            return true;
-        }
-        return false;
+        if (modalWindow == null) return false;
+        currentModalCallback.onHeaderBackPressed(this);
+        return true;
     }
 
     private int getHeadingTextId(ModalType modalType) {
@@ -87,7 +77,7 @@ public class Modal {
             return R.string.text_selection_modal_title;
         if (modalType == ModalType.ENTRY_LIST)
             return R.string.entry_list_modal_title;
-        return R.string.settings_modal_title;
+        return R.string.quick_settings_modal_title;
     }
 
     private int getContentLayoutId(ModalType modalType) {
@@ -100,22 +90,33 @@ public class Modal {
 
 
     public void showModal(ModalType modalType, ModalCallback modalCallback) {
-        currentModalCallback = modalCallback;
         Context context = overlayView.getContext();
-        ViewGroup modalRootWindow = overlayView.findViewById(R.id.modal_window);
-        int topPadding = context.getResources().getDimensionPixelSize(R.dimen.modal_top_margin);
-        modalRootWindow.setPadding(0, topPadding, 0, 0);
-        ViewGroup content = overlayView.findViewById(R.id.modal_content);
-        ((TextView) modalRootWindow.findViewById(R.id.modal_back_title)).setText(getHeadingTextId(modalType));
-        modalRootWindow.findViewById(R.id.modal_back).setOnClickListener(v -> modalCallback.onHeaderBackPressed(modalRootWindow));
+        boolean isModalCreated = modalWindow == null;
+        if (isModalCreated) {
+            modalWindow = (ViewGroup) LayoutInflater.from(context)
+                    .inflate( R.layout.modal, null);
+            modalWindow.setOnClickListener(v -> {
+                currentModalCallback.onModalClosed();
+                currentModalCallback = null;
+                handleDefaultClose(this);
+            });
+        }
+        currentModalCallback = modalCallback;
 
-        content.removeAllViews();
+        int topPadding = context.getResources().getDimensionPixelSize(R.dimen.modal_top_margin);
+        modalWindow.setPadding(0, topPadding, 0, 0);
+        ViewGroup content = modalWindow.findViewById(R.id.modal_content);
+        ((TextView) modalWindow.findViewById(R.id.modal_back_title)).setText(getHeadingTextId(modalType));
+        modalWindow.findViewById(R.id.modal_back).setOnClickListener(v -> modalCallback.onHeaderBackPressed(this));
+
+        if (!isModalCreated)
+            content.removeAllViews();
         ViewGroup inflatedContent = (ViewGroup) LayoutInflater.from(context).inflate(
                 getContentLayoutId(modalType),
                 null);
         content.addView(inflatedContent);
-        View container = modalRootWindow.findViewById(R.id.modal_container);
-        if(modalRootWindow.getVisibility() == View.GONE) {
+        View container = modalWindow.findViewById(R.id.modal_container);
+        if(isModalCreated) {
             container.measure(
                     View.MeasureSpec.makeMeasureSpec(overlayView.getWidth(), View.MeasureSpec.AT_MOST),
                     View.MeasureSpec.makeMeasureSpec(overlayView.getHeight(), View.MeasureSpec.AT_MOST)
@@ -132,8 +133,8 @@ public class Modal {
             });
             animator.setDuration(150);
             modalCallback.onBeforeModalShown(inflatedContent);
+            overlayView.addView(modalWindow);
             animator.start();
-            modalRootWindow.setVisibility(View.VISIBLE);
         } else {
             modalCallback.onBeforeModalShown(inflatedContent);
             modalCallback.onOpened(inflatedContent, true);

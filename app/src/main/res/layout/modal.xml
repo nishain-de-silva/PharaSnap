@@ -4,6 +4,7 @@
     android:id="@+id/modal_backdrop"
     android:layout_height="match_parent"
     android:layout_gravity="center_horizontal"
+    android:background="@color/backdrop"
     android:layout_width="match_parent">
     <LinearLayout
         android:id="@+id/modal_container"
@@ -13,7 +14,6 @@
         android:layout_gravity="bottom|center_horizontal"
         android:background="@drawable/text_selection_window"
         android:paddingTop="18dp"
-        android:layout_margin="15dp"
         android:layout_width="match_parent"
         android:minHeight="@dimen/modal_min_height"
         android:layout_height="wrap_content">

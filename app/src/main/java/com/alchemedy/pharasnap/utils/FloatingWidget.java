@@ -40,7 +40,6 @@ import android.provider.MediaStore;
 import android.service.quicksettings.Tile;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.Pair;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -48,11 +47,9 @@ import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -76,7 +73,7 @@ import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 import com.alchemedy.pharasnap.widgets.SelectionEditorTextView;
 import com.alchemedy.pharasnap.widgets.TabSelector;
-import com.alchemedy.pharasnap.widgets.TextHint;
+import com.alchemedy.pharasnap.widgets.BottomBar;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
@@ -131,7 +128,7 @@ public class FloatingWidget {
     private Runnable mediaProjectionIdlePostRunnable = null;
     private ImageReader imageReader = null;
     private ClipboardManager clipboardManager;
-    private TextHint textHint;
+    private BottomBar bottomBar;
     private BrowserModal browserModal;
     private VirtualDisplay mediaProjectionDisplay;
     private boolean isAccessibilityServiceBusy;
@@ -164,23 +161,27 @@ public class FloatingWidget {
     private void showResult(@Nullable CopiedItem copiedItem) {
         if (copiedItem == null) {
             if (mode == Mode.TEXT)
-                textHint.changeText(hostingService.getString(R.string.text_detection_failed));
+                bottomBar.changeText(hostingService.getString(R.string.text_detection_failed));
             else
-                textHint.changeText("Something went wrong could not capture the image");
+                bottomBar.changeText("Something went wrong could not capture the image");
             return;
         }
 
         View copyIndicator = overlayView.findViewById(R.id.text_copy_indicator);
         if (mode == Mode.CROPPED_IMAGE_CAPTURE) {
             rootOverlay.addSingleBoundingBox(copiedItem.rect);
-            textHint.changeText("Image is saved to the storage");
+            bottomBar.changeText("Image is saved to the storage");
             return;
         }
         if (rootOverlay.addNewBoundingBox(collectedTexts, copiedItem)) {
             copyIndicator.setVisibility(View.VISIBLE);
-            textHint.changeText("Text block added. Tap here to edit selection. Tap on selection block again to remove");
-        } else if (collectedTexts.isEmpty())
-            copyIndicator.setVisibility(View.GONE);
+            bottomBar.changeText("Text block added. Tap here to edit selection. Tap on selection block again to remove");
+        } else {
+            bottomBar.resetTranslationIfNeeded(ArrayFunctions.map(collectedTexts, i -> i.rect));
+            if (collectedTexts.isEmpty()) {
+                copyIndicator.setVisibility(View.GONE);
+            }
+        }
     }
 
     void saveTextToStorageIfNeeded(@Nullable String textToStore) {
@@ -245,9 +246,9 @@ public class FloatingWidget {
             }
 
             @Override
-            public void onHeaderBackPressed(ViewGroup modalWindow) {
+            public void onHeaderBackPressed(Modal modal) {
                 if (isDraftText)
-                    super.onHeaderBackPressed(modalWindow);
+                    super.onHeaderBackPressed(modal);
                 else {
                     if (editedText != null)
                         showEntryList(new EditedTextEntry(!collectedTexts.isEmpty() ? itemIndex - 1 : itemIndex, editedText));
@@ -288,7 +289,7 @@ public class FloatingWidget {
     void showEntryList(@Nullable EditedTextEntry updatedTextEntry) {
         KeyguardManager keyguardManager = (KeyguardManager) hostingService.getSystemService(Context.KEYGUARD_SERVICE);
         if(keyguardManager.isKeyguardLocked()) {
-            textHint.changeTextAndNotify("Sorry cannot show recent items when device is locked");
+            bottomBar.changeTextAndNotify("Sorry cannot show recent items when device is locked");
             return;
         }
         modal.showModal(Modal.ModalType.ENTRY_LIST, new Modal.ModalCallback() {
@@ -380,7 +381,7 @@ public class FloatingWidget {
         if (newMode == mode) return;
         clearAllSelections(false);
         mode = newMode;
-        textHint.changeMode(mode);
+        bottomBar.changeMode(mode);
         ((ImageButton) overlayView.findViewById(R.id.toggleMode)).setImageResource(newMode == Mode.TEXT ? R.drawable.character : R.drawable.camera);
 
         if (newMode == Mode.TEXT) {
@@ -399,12 +400,12 @@ public class FloatingWidget {
     private void toggleExpandWidget() {
         if (isWidgetExpanded) {
             modal.closeModal();
-            browserModal.close();
+            browserModal.closeImmediately();
             clearAllSelections(true);
             widgetController.close();
             startCountdownToTerminateMediaProjection();
             toggleListenToSystemBroadcastToCollapseWidget(false);
-            textHint.setVisibility(View.GONE);
+            bottomBar.setVisibility(View.GONE);
             overlayView.findViewById(R.id.active_setting_indicator).setVisibility(View.GONE);
             textDetectionMode = TextDetectionMode.AUTO;
         } else {
@@ -419,7 +420,7 @@ public class FloatingWidget {
                 }
             }
 
-            textHint.changeMode(mode);
+            bottomBar.changeMode(mode);
             toggleListenToSystemBroadcastToCollapseWidget(true);
             widgetController.open();
         }
@@ -449,6 +450,7 @@ public class FloatingWidget {
     }
 
     private boolean clearAllSelections(boolean shouldStoreLastText) {
+        bottomBar.resetTranslation();
         if (mode == Mode.CROPPED_IMAGE_CAPTURE) {
             return rootOverlay.clearAllSelections();
         }
@@ -578,7 +580,7 @@ public class FloatingWidget {
         windowManager.addView(overlayView, params);
         // Find the button in the overlay
         rootOverlay = overlayView.findViewById(R.id.rootOverlay);
-        browserModal = overlayView.findViewById(R.id.browser_window);
+        browserModal = new BrowserModal(rootOverlay);
 
         ImageButton listButton = overlayView.findViewById(R.id.list);
         ImageButton stopButton = overlayView.findViewById(R.id.stop);
@@ -586,10 +588,10 @@ public class FloatingWidget {
         ImageButton eraserButton = overlayView.findViewById(R.id.eraser);
         eraserButton.setOnClickListener(v -> {
             if (clearAllSelections(false))
-                textHint.changeText("No text selections to clear");
+                bottomBar.changeText("No text selections to clear");
         });
-        textHint = overlayView.findViewById(R.id.text_hint);
-        textHint.setOnTapListener(new TextHint.OnTapListener() {
+        bottomBar = overlayView.findViewById(R.id.text_hint);
+        bottomBar.setOnTapListener(new BottomBar.OnTapListener() {
             @Override
             public void onTap() {
                 if (collectedTexts.isEmpty()) return;
@@ -617,16 +619,13 @@ public class FloatingWidget {
             });
         });
 
-        overlayView.findViewById(R.id.text_hint_close).setOnClickListener(v -> textHint.setVisibility(View.GONE));
-
-
         // Handle touch events on the overlay
         rootOverlay.setOnTapListener(new CustomOverlayView.OnTapListener() {
             @Override
             public void onTap(CoordinateF tappedCoordinate, boolean isLongPress) {
                 // Record tap coordinates
                 if (isAccessibilityServiceBusy) {
-                    textHint.changeTextAndNotify("Sorry, we are still busy looking for text element you tapped previously");
+                    bottomBar.changeTextAndNotify("Sorry, we are still busy looking for text element you tapped previously");
                     return;
                 }
 
@@ -634,9 +633,11 @@ public class FloatingWidget {
                 if (removedIndex != -1) {
                     if (mode == Mode.TEXT) {
                         collectedTexts.remove(removedIndex);
+                        bottomBar.resetTranslationIfNeeded(ArrayFunctions.map(collectedTexts, (i) -> i.rect));
                         if (collectedTexts.isEmpty())
                             overlayView.findViewById(R.id.text_copy_indicator).setVisibility(View.GONE);
-                    }
+                    } else
+                        bottomBar.resetTranslation();
                     return;
                 }
 
@@ -684,7 +685,7 @@ public class FloatingWidget {
                 if (dragDistance > 50)
                     toggleExpandWidget();
                 else {
-                    textHint.changeText(hostingService.getString(R.string.text_hint_close_overlay));
+                    bottomBar.changeText(hostingService.getString(R.string.text_hint_close_overlay));
                 }
             }
         });
@@ -761,7 +762,7 @@ public class FloatingWidget {
         } else {
             if (ContextCompat.checkSelfPermission(hostingService, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     != PackageManager.PERMISSION_GRANTED) {
-                textHint.changeTextAndNotify("Storage permission has not granted. Please go to settings and grant storage permissions.");
+                bottomBar.changeTextAndNotify("Storage permission has not granted. Please go to settings and grant storage permissions.");
                 return;
             }
             String imagesDir = Environment.getExternalStoragePublicDirectory(

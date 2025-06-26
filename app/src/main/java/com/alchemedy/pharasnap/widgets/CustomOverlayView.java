@@ -67,20 +67,24 @@ public class CustomOverlayView extends FrameLayout {
 
     private void initPaint() {
         paint = new Paint();
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(10);
-        paint.setColor(Color.GREEN);
     }
 
     public void setOnDismissListener(OnDismissListener onDismissListener) {
         this.onDismissListener = onDismissListener;
     }
+    private boolean isBackButtonPressedDown;
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if ((event.getKeyCode() == KeyEvent.KEYCODE_BACK) && event.getAction() == MotionEvent.ACTION_UP) {
-            onDismissListener.onDismiss();
-            return true;
+        if ((event.getKeyCode() == KeyEvent.KEYCODE_BACK)) {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                isBackButtonPressedDown = true;
+            } else if(event.getAction() == MotionEvent.ACTION_UP) {
+                if (isBackButtonPressedDown)
+                    onDismissListener.onDismiss();
+                isBackButtonPressedDown = false;
+                return true;
+            }
         }
 
         return super.dispatchKeyEvent(event);

@@ -88,7 +88,7 @@
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="12dp">
 
-        <com.alchemedy.pharasnap.widgets.TextHint
+        <com.alchemedy.pharasnap.widgets.BottomBar
             android:id="@+id/text_hint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -123,23 +123,12 @@
             android:background="@drawable/primary_blue_circle"
             />
         <ImageButton
-            android:id="@+id/text_hint_close"
             android:layout_marginEnd="5dp"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/hide"
+            android:src="@drawable/move"
             android:layout_gravity="end"
             android:background="@drawable/black_color_circle"
             />
     </FrameLayout>
-    <include
-        android:id="@+id/browser_window"
-        layout="@layout/browser_modal"
-        android:visibility="gone"
-        />
-    <include
-        android:id="@+id/modal_window"
-        layout="@layout/modal"
-        android:visibility="gone"
-        />
 </com.alchemedy.pharasnap.widgets.CustomOverlayView>

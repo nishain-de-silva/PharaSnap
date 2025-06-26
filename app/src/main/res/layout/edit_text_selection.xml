@@ -4,24 +4,6 @@
     android:gravity="center_horizontal"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end">
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/action_search_web"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginEnd="12dp"
-            android:text="Search Web" />
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/action_copy_entire_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:text="Select all text" />
-    </LinearLayout>
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -30,46 +12,75 @@
         android:textColor="@color/darkPurple"
         android:text="Text cursor move and select text word by word"
         />
-    <ScrollView
+    <FrameLayout
         android:layout_width="match_parent"
+        android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_height="0dp">
-        <FrameLayout
+        android:layout_marginBottom="12dp">
+        <ScrollView
+            android:layout_marginTop="15dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/text_container"
-            android:layout_marginBottom="12dp">
-            <com.alchemedy.pharasnap.widgets.SelectionEditorTextView
-                android:id="@+id/selectedText"
-                android:clickable="true"
-                android:focusable="true"
-                android:textColor="@android:color/black"
-                android:textSize="15sp"
-                android:layout_width="match_parent"
-                android:lineSpacingExtra="5dp"
-                android:paddingStart="@dimen/thumb_size"
-                android:paddingEnd="10dp"
-                android:paddingTop="10dp"
-                android:paddingBottom="@dimen/thumb_size"
+            android:layout_height="wrap_content">
+            <FrameLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                />
-        </FrameLayout>
-    </ScrollView>
+                android:background="@drawable/text_container"
+                >
+                <com.alchemedy.pharasnap.widgets.SelectionEditorTextView
+                    android:id="@+id/selectedText"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:textColor="@android:color/black"
+                    android:textSize="15sp"
+                    android:layout_width="match_parent"
+                    android:lineSpacingExtra="5dp"
+                    android:paddingStart="@dimen/thumb_size"
+                    android:paddingEnd="10dp"
+                    android:layout_marginTop="5dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="@dimen/thumb_size"
+                    android:layout_height="wrap_content"
+                    />
+            </FrameLayout>
+        </ScrollView>
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/action_copy_entire_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="Select all text" />
+    </FrameLayout>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/action_change_text_content"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Edit Text" />
-        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/action_copy_selected_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:text="Copy Selected text" />
+            android:drawableEnd="@drawable/copy_white"
+            android:layout_marginHorizontal="12dp"
+            android:text="Copy Selected text " />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/action_change_text_content"
+            android:layout_gravity="end|bottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableEnd="@drawable/edit"
+            android:text="Edit text "
+            />
         </LinearLayout>
-
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_marginStart="12dp">
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/action_search_web"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableEnd="@drawable/search"
+            android:text="Quick Google selected text " />
+    </LinearLayout>
 </LinearLayout>
