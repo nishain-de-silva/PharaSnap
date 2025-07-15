@@ -8,6 +8,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.alchemedy.pharasnap.R;
+import com.alchemedy.pharasnap.models.TutorialAction;
+import com.alchemedy.pharasnap.utils.Tutorial.TutorialGuide;
 
 public class Modal {
     ViewGroup overlayView;
@@ -26,6 +28,12 @@ public class Modal {
     }
 
     static void handleDefaultClose(Modal modal) {
+        if (TutorialGuide.trigger(TutorialAction.MODAL_CLOSE))
+            return;
+        if (modal.currentModalCallback != null) {
+            modal.currentModalCallback.onModalClosed();
+            modal.currentModalCallback = null;
+        }
         View container = modal.modalWindow.findViewById(R.id.modal_container);
         ValueAnimator animator = ValueAnimator.ofFloat(0, container.getHeight());
         animator.addUpdateListener(valueAnimator -> {
@@ -34,6 +42,7 @@ public class Modal {
             if (valueAnimator.getAnimatedFraction() == 1) {
                 modal.overlayView.removeView(modal.modalWindow);
                 modal.modalWindow = null;
+                TutorialGuide.trigger(TutorialAction.MODAL_CLOSED);
             }
         });
         animator.setDuration(150);
@@ -52,11 +61,14 @@ public class Modal {
 
     public void closeModal() {
         if(modalWindow != null) {
-            if (currentModalCallback != null) {
-                currentModalCallback.onModalClosed();
-                currentModalCallback = null;
-            }
             handleDefaultClose(this);
+        }
+    }
+
+    public void closeImmediately() {
+        if (modalWindow != null) {
+            overlayView.removeView(modalWindow);
+            modalWindow = null;
         }
     }
 
@@ -96,8 +108,6 @@ public class Modal {
             modalWindow = (ViewGroup) LayoutInflater.from(context)
                     .inflate( R.layout.modal, null);
             modalWindow.setOnClickListener(v -> {
-                currentModalCallback.onModalClosed();
-                currentModalCallback = null;
                 handleDefaultClose(this);
             });
         }
@@ -127,8 +137,10 @@ public class Modal {
             animator.addUpdateListener(valueAnimator -> {
                 float amount = (float) valueAnimator.getAnimatedValue();
                 container.setTranslationY(amount);
-                if (valueAnimator.getAnimatedFraction() == 1)
+                if (valueAnimator.getAnimatedFraction() == 1) {
                     modalCallback.onOpened(inflatedContent, false);
+                    TutorialGuide.trigger(TutorialAction.MODAL_OPENED);
+                }
 
             });
             animator.setDuration(150);

@@ -9,7 +9,6 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.SystemClock;
 import android.service.quicksettings.Tile;
-import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
@@ -35,11 +34,15 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
         }
     }
 
-    private void showFloatingWidgetSafety(boolean shouldExpandWidget) {
+    private void showFloatingWidgetSafety(boolean shouldExpandWidget, boolean showTutorial) {
         if (floatingWidget == null)
-            floatingWidget = new FloatingWidget(NodeExplorerAccessibilityService.this, shouldExpandWidget);
-        else
-            Toast.makeText(NodeExplorerAccessibilityService.this, "Widget is already launched", Toast.LENGTH_SHORT).show();
+            floatingWidget = new FloatingWidget(NodeExplorerAccessibilityService.this, shouldExpandWidget, showTutorial);
+        else {
+            if (showTutorial)
+                floatingWidget.startTutorial();
+            else
+                Toast.makeText(NodeExplorerAccessibilityService.this, "Widget is already launched", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -64,7 +67,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
             ShortcutTileLauncher.requestListeningState(this, new ComponentName(this, ShortcutTileLauncher.class));
         }  else if (startWidgetAfterAccessibilityLaunch) {
             startWidgetAfterAccessibilityLaunch = false;
-            floatingWidget = new FloatingWidget(this, false);
+            floatingWidget = new FloatingWidget(this, false, false);
         }
 
         messageHandler
@@ -81,7 +84,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                                 onStopWidget();
                             }
                         } else
-                            showFloatingWidgetSafety(shouldSkipNotify);
+                            showFloatingWidgetSafety(shouldSkipNotify, intent.hasExtra(Constants.SHOULD_SHOW_TUTORIAL_GUIDE));
                     }
                 }, Constants.ACCESSIBILITY_SERVICE);
     }
@@ -158,7 +161,7 @@ public class NodeExplorerAccessibilityService extends android.accessibilityservi
                             longPressButtonTrigger.systemPackageName.contentEquals(accessibilityEvent.getPackageName())) {
                 CharSequence contentDescription = accessibilityEvent.getContentDescription();
                 if (contentDescription != null && longPressButtonTrigger.contentDescription.contentEquals(contentDescription)) {
-                    showFloatingWidgetSafety(true);
+                    showFloatingWidgetSafety(true, false);
                 }
             }
         }

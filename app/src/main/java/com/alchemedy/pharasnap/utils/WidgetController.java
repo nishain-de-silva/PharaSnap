@@ -16,7 +16,6 @@ import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -26,12 +25,14 @@ import com.alchemedy.pharasnap.helper.Constants;
 import com.alchemedy.pharasnap.helper.CoordinateF;
 import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.helper.WidgetLocationCoordinate;
+import com.alchemedy.pharasnap.models.TutorialAction;
 import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
+import com.alchemedy.pharasnap.utils.Tutorial.TutorialGuide;
 import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 
 public class WidgetController {
-    public static void launchWidget(Context context, boolean showAccessibilityPrompt, boolean isKnownAccessibilityDisabled) {
+    public static void launchWidget(Context context, boolean showAccessibilityPrompt, boolean isKnownAccessibilityDisabled, boolean showTutorial) {
         if (isKnownAccessibilityDisabled || !AccessibilityHandler.isAccessibilityServiceEnabled(context)) {
             NodeExplorerAccessibilityService.startWidgetAfterAccessibilityLaunch = true;
             if (showAccessibilityPrompt)
@@ -49,11 +50,14 @@ public class WidgetController {
                 context.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
             }
         } else {
+            Intent intent = new Intent(Constants.ACCESSIBILITY_SERVICE);
+            if (showTutorial)
+                intent.putExtra(Constants.SHOULD_SHOW_TUTORIAL_GUIDE, true);
             new MessageHandler(context)
-                    .sendBroadcast(new Intent(Constants.ACCESSIBILITY_SERVICE));
+                    .sendBroadcast(intent);
         }
     }
-     class ButtonPosition {
+     static class ButtonPosition {
         View button;
         CoordinateF position;
         ButtonPosition(View v) {
@@ -128,11 +132,10 @@ public class WidgetController {
         enableButton.isLeftOriented = isWidgetLeftOriented;
         Resources resources = context.getResources();
         int startAngle = 0;
-        int sweepAngle = (180 - (startAngle * 2));
 
         int radius = resources.getDimensionPixelSize(R.dimen.button_size) + resources.getDimensionPixelSize(R.dimen.space_between_buttons);
         int sign = isWidgetLeftOriented ? 1 : -1;
-        int unitAngle = sweepAngle / (buttonPositions.length - 1);
+        int unitAngle = 180 / (buttonPositions.length - 1);
 
         for (int index = 0; index < buttonPositions.length; index++) {
             ButtonPosition buttonPosition = buttonPositions[index];
@@ -197,6 +200,16 @@ public class WidgetController {
         } else {
             sharedPreferences.edit().putString(Constants.WIDGET_LAST_LOCATION_INFO, widgetLocation.toJSONString()).apply();
         }
+    }
+
+    public void syncLoadingIndicatorPosition() {
+        View loadingIndicator = overlayView.findViewById(R.id.loading);
+        FrameLayout.LayoutParams loadingIndicatorParams = (FrameLayout.LayoutParams) loadingIndicator.getLayoutParams();
+        loadingIndicatorParams.gravity = Gravity.CENTER_VERTICAL | (isWidgetLeftOriented ? Gravity.START : Gravity.END);
+
+        loadingIndicator.setTranslationX(buttonContainer.getTranslationX());
+        loadingIndicator.setTranslationY(buttonContainer.getTranslationY());
+        loadingIndicator.setLayoutParams(loadingIndicatorParams);
     }
     public void configureOverlayDimensions(FrameLayout.LayoutParams buttonContainerParams, boolean isExpanded, boolean shouldResetPosition, boolean shouldUpdateLayout) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -283,6 +296,8 @@ public class WidgetController {
         windowManager.updateViewLayout(overlayView, params);
         buttonContainerLayoutParams.height = buttonContainerSize.getHeight();
         buttonContainerLayoutParams.width = buttonContainerSize.getWidth();
+        // trigger when buttonContainer's params are successfully updated...
+        buttonContainer.post(() -> TutorialGuide.trigger(TutorialAction.TAP_WIDGET_BUTTON));
         buttonContainer.setLayoutParams(buttonContainerLayoutParams);
         ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(duration);
         int screenWidth;
@@ -340,6 +355,7 @@ public class WidgetController {
                 params.width = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.gravity = Gravity.CENTER_VERTICAL | (isWidgetLeftOriented ? Gravity.START : Gravity.END);
                 params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                overlayView.post(() -> TutorialGuide.trigger(TutorialAction.PAUSE_TUTORIAL));
                 windowManager.updateViewLayout(overlayView, params);
             }
         });

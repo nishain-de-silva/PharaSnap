@@ -6,6 +6,10 @@ public class Constants {
     public static final String STOP_WIDGET = "stopWidget";
     public static final String SKIP_NOTIFY_QUICK_TILE = "skipNotify";
     public static final String ENTRIES_KEY = "entries";
+    public static final String SHOULD_SHOW_TUTORIAL_GUIDE = "shouldShowTutorialGuide";
+    public static final String SHOW_HIDDEN_TEXT_IN_TUTORIAL = "showHiddenTextInTutorial";
+    public static final String END_TUTORIAL = "endTutorial";
+    public static final String TUTORIAL = "tutorial";
     public static final String IS_TUTORIAL_SHOWN = "isTutorialShown";
     public static final String TILE_ADDED_WHILE_TUTORIAL = "tileAddedWhileTutorial";
     public static final String LAUNCH_SERVICE_WITHOUT_CHECK = "launchServiceWithoutCheck";

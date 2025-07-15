@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
+import android.os.Handler;
 import android.text.Layout;
 import android.util.AttributeSet;
 import android.util.Pair;
@@ -221,6 +222,11 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
         cursorColor = ContextCompat.getColor(getContext(), R.color.darkPurple);
         selectedTextColor = ContextCompat.getColor(getContext(), R.color.textSelection);
         cursorWidth = getResources().getDimensionPixelSize(R.dimen.cursor_width);
+    }
+
+    public void changeText(CharSequence text) {
+        post(this::selectAllText);
+        super.setText(text);
     }
 
     public void selectAllText() {

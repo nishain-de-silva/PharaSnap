@@ -7,20 +7,24 @@ import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
-import android.util.AttributeSet;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.cardview.widget.CardView;
 
 import com.alchemedy.pharasnap.R;
+import com.alchemedy.pharasnap.models.TutorialAction;
+import com.alchemedy.pharasnap.utils.Tutorial.TutorialGuide;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -42,17 +46,22 @@ public class BrowserModal {
                 .setDuration(300);
                         animator.addUpdateListener(valueAnimator -> {
                             mainContainer.setTranslationY((Float) valueAnimator.getAnimatedValue());
-                            if (!isEntry && valueAnimator.getAnimatedFraction() == 1) {
-                                webView.destroy();
-                                rootView.removeView(modal);
-                                modal = null;
-                                webView = null;
+                            if (valueAnimator.getAnimatedFraction() == 1) {
+                                if (!isEntry) {
+                                    webView.destroy();
+                                    rootView.removeView(modal);
+                                    modal = null;
+                                    webView = null;
+                                }
+                                TutorialGuide.trigger(isEntry ? TutorialAction.MODAL_OPENED : TutorialAction.MODAL_CLOSED);
                             }
                         });
                         animator.start();
     }
 
     private void handleClose() {
+        if (TutorialGuide.trigger(TutorialAction.MODAL_CLOSE))
+            return;
         animateTransition(false);
     }
     @SuppressLint("SetJavaScriptEnabled")
@@ -63,7 +72,12 @@ public class BrowserModal {
         webView.getSettings().setJavaScriptEnabled(true);
         modal.findViewById(R.id.no_network_indicator).setVisibility(View.GONE);
         modal.findViewById(R.id.browser_loader).setVisibility(View.GONE);
+        ConnectivityManager connectivityManager = (ConnectivityManager) modal.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+
         modal.findViewById(R.id.page_reload).setOnClickListener((v) -> {
+            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            if (activeNetworkInfo == null || !activeNetworkInfo.isConnectedOrConnecting())
+                return;
             modal.findViewById(R.id.no_network_indicator).setVisibility(View.GONE);
             webView.setVisibility(View.VISIBLE);
             webView.reload();
@@ -73,16 +87,13 @@ public class BrowserModal {
         WebViewClient webViewClient = new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                modal.findViewById(R.id.browser_loader).setVisibility(View.VISIBLE);
-                ConnectivityManager connectivityManager = (ConnectivityManager) modal.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
                 NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-                if (activeNetworkInfo != null) {
-                    if (!activeNetworkInfo.isConnectedOrConnecting()) {
-                        modal.findViewById(R.id.no_network_indicator).setVisibility(View.VISIBLE);
-                        modal.findViewById(R.id.browser_loader).setVisibility(View.GONE);
-                        webView.setVisibility(View.GONE);
-                    }
-                }
+                if (activeNetworkInfo == null || !activeNetworkInfo.isConnectedOrConnecting()) {
+                    modal.findViewById(R.id.no_network_indicator).setVisibility(View.VISIBLE);
+                    modal.findViewById(R.id.browser_loader).setVisibility(View.GONE);
+                    webView.setVisibility(View.GONE);
+                } else
+                    modal.findViewById(R.id.browser_loader).setVisibility(View.VISIBLE);
             }
 
             @Override
@@ -91,9 +102,6 @@ public class BrowserModal {
             }
         };
         webView.setWebViewClient(webViewClient);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            webView.getSettings().setForceDark(WebSettings.FORCE_DARK_ON);
-        }
         modal.setPadding(0, (int) (rootView.getHeight() * 0.4f), 0, 0);
         rootView.addView(modal);
         animateTransition(true);

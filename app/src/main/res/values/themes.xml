@@ -35,15 +35,17 @@
         <item name="android:textColor">?android:textColorPrimary</item>
         <item name="buttonBarButtonStyle">@style/Theme.PharaSnap.AlertDialogButton</item>
     </style>
+    <style name="Theme.PharaSnap.SplashActivity" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/primaryYellow</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.PharaSnap.Activity</item>
+    </style>
     <style name="Theme.PharaSnap" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Primary brand color. -->
 <!--        <item name="colorPrimary">@color/purple_500</item>-->
 <!--        <item name="font">@font/primary</item>-->
         <item name="fontFamily">@font/primary</item>
         <item name="buttonStyle">@style/Theme.PharaSnap.Button</item>
-        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/primaryYellow</item>
-        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/logo</item>
-        <item name="android:windowSplashScreenBrandingImage" tools:targetApi="s">@drawable/branding_banner</item>
         <item name="android:fontFamily">@font/primary</item>
         <item name="alertDialogTheme">@style/Theme.PharaSnap.AlertDialog</item>
 <!--        <item name="colorPrimaryVariant">@color/purple_700</item>-->

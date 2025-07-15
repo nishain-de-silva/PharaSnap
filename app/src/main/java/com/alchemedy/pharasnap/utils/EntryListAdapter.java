@@ -55,6 +55,7 @@ public class EntryListAdapter extends ArrayAdapter<EntryListAdapter.Item> {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_row, null);
         }
         View sliderContainer = convertView.findViewById(R.id.item_slider);
+        assert item != null;
         if (!item.isDraft) {
             convertView.setOnClickListener(null);
             convertView.setOnTouchListener(new View.OnTouchListener() {

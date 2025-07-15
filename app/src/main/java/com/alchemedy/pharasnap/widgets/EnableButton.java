@@ -1,7 +1,6 @@
 package com.alchemedy.pharasnap.widgets;
 
 import android.content.Context;
-import android.os.Handler;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -64,8 +63,7 @@ public class EnableButton extends androidx.appcompat.widget.AppCompatImageButton
                     if (gestureMode == GESTURE_UNDETERMINED) {
                         if (!enableButtonDownCoordinate.isCloserTo(x, y, 15)) {
                             gestureMode = GESTURE_DRAG;
-                            if (!isExpanded)
-                                onTapListener.onDragGestureStarted();
+                            onTapListener.onDragGestureStarted();
                         }
                     }
 

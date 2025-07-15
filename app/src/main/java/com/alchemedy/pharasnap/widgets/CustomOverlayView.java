@@ -134,6 +134,8 @@ public class CustomOverlayView extends FrameLayout {
                     downCoordinate = new CoordinateF(x, y);
                     longPressHandler = new Handler();
                     longPressHandlerTask = () -> {
+                        longPressHandler = null;
+                        longPressHandlerTask = null;
                         onTapListener.onTap(new CoordinateF(x, y), true);
                         performLongClick();
                     };

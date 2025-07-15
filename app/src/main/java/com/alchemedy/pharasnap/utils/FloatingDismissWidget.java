@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.WindowManager;
 
 import com.alchemedy.pharasnap.R;
+import com.alchemedy.pharasnap.models.TutorialAction;
 import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 

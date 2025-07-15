@@ -2,8 +2,12 @@ package com.alchemedy.pharasnap.widgets;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.alchemedy.pharasnap.BuildConfig;
 

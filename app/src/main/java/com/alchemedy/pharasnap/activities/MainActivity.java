@@ -5,17 +5,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowManager;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.splashscreen.SplashScreen;
 
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.Constants;
@@ -23,6 +20,7 @@ import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.utils.AccessibilityHandler;
 import com.alchemedy.pharasnap.utils.WidgetController;
 import com.alchemedy.pharasnap.widgets.WalkthroughSlider;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import java.util.ArrayList;
 
@@ -66,14 +64,8 @@ public class MainActivity extends ThemeActivity {
                 R.string.capturing_modes_tutorial,
                 "Capture Modes"
         ).onDrawGraphics(R.layout.tutorial_graphic_controls));
-        pages.add(new WalkthroughSlider.PageContent(R.string.text_copy_tutorial, "Copy Text selection")
-                .onDrawGraphics(R.layout.tutorial_graphic_text_selection));
         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.R)
-            pages.add(new WalkthroughSlider.PageContent(R.string.media_projection_request_explanation, "Media Projection Requests"));
-        pages.add(
-                new WalkthroughSlider.PageContent(R.string.recent_items_tutorial, "Recent Items")
-                        .onDrawGraphics(R.layout.tutorial_graphic_recent_items)
-        );
+            pages.add(new WalkthroughSlider.PageContent(R.string.media_projection_request_explanation, "Usage of Media Projection"));
     }
 
     private void showWalkthroughSlider() {
@@ -115,6 +107,8 @@ public class MainActivity extends ThemeActivity {
                 showMainMenu();
                 pages.clear();
                 sharedPreferences.edit().putBoolean(Constants.IS_TUTORIAL_SHOWN, true).apply();
+                WidgetController.launchWidget(MainActivity.this, true, false, true);
+                startActivity(new Intent(MainActivity.this, TutorialActivity.class));
             }
         });
     }
@@ -132,7 +126,7 @@ public class MainActivity extends ThemeActivity {
         setContentView(R.layout.activity_main);
         walkthroughSlider = null;
         View launchButton = findViewById(R.id.launch_widget);
-        launchButton.setOnClickListener(v -> WidgetController.launchWidget(this, true, false));
+        launchButton.setOnClickListener(v -> WidgetController.launchWidget(this, true, false, false));
         findViewById(R.id.troubleshoot).setOnClickListener(v -> startActivity(new Intent(this, TroubleshootActivity.class)));
         findViewById(R.id.settings).setOnClickListener(v -> {
             if (AccessibilityHandler.isAccessibilityServiceEnabled(MainActivity.this)) {
@@ -157,6 +151,7 @@ public class MainActivity extends ThemeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
         messageHandler = new MessageHandler(this);
         pages = new ArrayList<>();

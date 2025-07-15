@@ -12,7 +12,9 @@ import androidx.annotation.Nullable;
 
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.helper.CoordinateF;
+import com.alchemedy.pharasnap.models.TutorialAction;
 import com.alchemedy.pharasnap.utils.FloatingWidget;
+import com.alchemedy.pharasnap.utils.Tutorial.TutorialGuide;
 
 import java.util.ArrayList;
 
@@ -100,12 +102,12 @@ public class BottomBar extends androidx.appcompat.widget.AppCompatTextView {
                     downTranslationY = view.getTranslationY();
                 } else if (action == MotionEvent.ACTION_MOVE) {
                     if (!isDrag && !downCoordinate.isCloserTo(motionEvent.getRawX(), motionEvent.getRawY(), 15)) {
+                        TutorialGuide.trigger(TutorialAction.MOVE_BOTTOM_BAR);
                         isDrag = true;
                     }
                     if (isDrag) {
                         float newTranslation = downTranslationY + motionEvent.getRawY() - downCoordinate.y;
-                        if (newTranslation < 0)
-                            view.setTranslationY(newTranslation);
+                        if (newTranslation < 0) view.setTranslationY(newTranslation);
                         else
                             view.setTranslationY(0);
                     }
@@ -113,7 +115,8 @@ public class BottomBar extends androidx.appcompat.widget.AppCompatTextView {
                     if (!isDrag) {
                         onTapListener.onTap();
                         view.performClick();
-                    }
+                    } else
+                        TutorialGuide.trigger(TutorialAction.MOVE_FINISHED_BOTTOM_BAR);
                 }
                 return true;
             }

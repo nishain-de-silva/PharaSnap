@@ -51,7 +51,7 @@ public class EditTextModalActivity extends AppCompatActivity {
         findViewById(R.id.modal_container).setMinimumHeight(0);
         ViewGroup modalContentContainer = findViewById(R.id.modal_content);
         ((TextView) findViewById(R.id.modal_back_title)).setText(R.string.change_text_modal_title);
-        ((ImageButton) findViewById(R.id.modal_back)).setOnClickListener(v -> onBackPressed());
+        findViewById(R.id.modal_back).setOnClickListener(v -> onBackPressed());
         ViewGroup modalContent = (ViewGroup) LayoutInflater.from(this).inflate(R.layout.edit_text_content, null);
         editText = modalContent.findViewById(R.id.changed_text);
         editText.setText(getIntent().getStringExtra(Constants.PAYLOAD_EDIT_TEXT));

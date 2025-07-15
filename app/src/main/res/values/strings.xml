@@ -27,14 +27,8 @@
         \n\nAnother way to open the widget is by hold pressing the app launch icon which prompt you open the widget.
     </string>
     <string name="add_tile_requirement">Quick launching from quick settings in notification tiles is the most recommended way to launch/open this tool because it is very quicker and you don\'t switch between apps, simply slide down the notification tile panel and tap the shortcut button</string>
-    <string name="media_projection_request_explanation">Whenever PharaSnap wants to read visual content of the screen (using picture mode or text recognition on pictures on the screen) you will be prompt for requesting screen capturing session to capture visual content on the screen (this is an system requirement for your Android Version).
-    When the widget is collapsed or when switching away from picture mode which starts an idle cooldown to end screen capturing if not used. Then you will be prompted again to grant screen capturing if it is required again</string>
-    <string name="capturing_modes_tutorial">PharaSnap has two modes text and picture mode. Text mode capture text on the screen upon tapping including text placed on images and added to your clipboard. You can capture text on any language on text elements on the screen but however when capturing text placed inside pictures PharaSnap will use text recognition which for now only support latin characters (including English).
-On Picture Mode, you can capture screenshot of only the relevant picture from screen by tapping on it picture by automatically cropping out highlighted image - technically you can use this mode on other UI elements like text blocks, button .etc, not only pictures.
-You can switch between the two modes with left-most button on the widget</string>
-    <string name="text_copy_tutorial">Once you tap on the text on screen (not drag and select) it would get highlighted and you can select multiple selections at once.
-        By default all text from all selected text blocks will be automatically copied to clipboard once you exit or collapse the floating widget. Also you can use text selection editor to only select the required text from the text blocks when you tap on the yellow bar.</string>
-    <string name="recent_items_tutorial">You can also view your last copied items in the recent list from the floating widget itself. On hold pressing a single english word which prompts you the definition on Google web browser Give it a try!.</string>
+    <string name="media_projection_request_explanation">PharaSnap may wants to read visual content of the screen you will be for requested for allowing screen capture as a method to capture screenshot of the screen. Almost every time PharaSnap want to see the screen visually on demand for capturing cropped screenshots and recognizing text on images</string>
+    <string name="capturing_modes_tutorial">PharaSnap has two modes text and picture mode. In text mode you can select and copy text - even text on images. In Picture mode you capture image of the specific element on the screen in a single tap.</string>
     <string name="developer_note">This is an app developed by single person. If love this app useful I would like to hear your feedback and thoughts.</string>
     <string name="main_menu_list">main menu list</string>
     <string name="tile_label">Capture text</string>
@@ -45,12 +39,13 @@ You can switch between the two modes with left-most button on the widget</string
     <string name="first_troubleshooting_heading">Not detecting text on image mode ?</string>
     <string name="troubleshooting_page_header">Troubleshooting</string>
     <string name="long_press_button_changer_default_label">Assign button</string>
+    <string name="tutorial_hidden_text_content">For further information please contact P.D Veronica as included on invitation email.</string>
     <string-array name="text_mode_descriptions">
-        <item>Auto Switch</item>
-        <item>(Default) Smartly detects type of the tapped element and use text image recognition if required or capture the text provided by accessibility.</item>
-        <item>Text Label</item>
-        <item>Capture text provided only by accessibility on non-image text elements without using OCR</item>
-        <item>Image text recognition</item>
-        <item>Recognize and capture text on images only. Only supports recognition of latin characters (including English)</item>
+        <item>(Default) Auto Switch</item>
+        <item>Smartly detects type of the tapped element and use text image recognition if required or capture the text provided by accessibility.</item>
+        <item>Accessibility Text Only</item>
+        <item>Prioritize and capture text only accessibility text even on images</item>
+        <item>Image Text Recognition Only</item>
+        <item>Use only OCR to recognize text visually on any tapped element without capturing the accessibility Only supports recognition of latin characters (including English).</item>
     </string-array>
 </resources>
