@@ -49,10 +49,17 @@
             android:theme="@style/Theme.PharaSnap.TransparentActivity" />
         <activity
             android:name=".activities.EditTextModalActivity"
-            android:excludeFromRecents="true"
             android:configChanges="orientation|screenSize"
-            android:noHistory="true"
             android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:excludeFromRecents="true"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.PharaSnap.EditTextModal" />
+        <activity
+            android:name=".activities.BrowserModalActivity"
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:excludeFromRecents="true"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.PharaSnap.EditTextModal" />
         <service

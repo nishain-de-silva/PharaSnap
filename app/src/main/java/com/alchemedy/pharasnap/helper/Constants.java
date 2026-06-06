@@ -7,8 +7,9 @@ public class Constants {
     public static final String SKIP_NOTIFY_QUICK_TILE = "skipNotify";
     public static final String ENTRIES_KEY = "entries";
     public static final String SHOULD_SHOW_TUTORIAL_GUIDE = "shouldShowTutorialGuide";
-    public static final String SHOW_HIDDEN_TEXT_IN_TUTORIAL = "showHiddenTextInTutorial";
+    public static final String TUTORIAL_PLAYGROUND_STEP = "tutorialPlaygroundStep";
     public static final String END_TUTORIAL = "endTutorial";
+    public static final String BROWSER_CLOSED = "browserClosed";
     public static final String TUTORIAL = "tutorial";
     public static final String IS_TUTORIAL_SHOWN = "isTutorialShown";
     public static final String TILE_ADDED_WHILE_TUTORIAL = "tileAddedWhileTutorial";
@@ -17,7 +18,7 @@ public class Constants {
     public static final String SHARED_PREFERENCE_KEY = "default";
     public static final String PAYLOAD_EDIT_TEXT = "payloadEditText";
     public static final String WIDGET_IS_STOPPING = "widgetIsStopping";
-    public static final String SHOULD_CLOSE_MODAL = "ShouldCloseModal";
+    public static final String CLOSE_PARENT_MODAL = "closeParentModal";
     public static final String MEDIA_PROJECTION_DATA = "mediaProjectionData";
     public static final String WIDGET_LAST_LOCATION_INFO = "widgetLastLocationInfo";
     public static final String IS_WIDGET_LEFT_ORIENTED = "isWidgetLeftOriented";

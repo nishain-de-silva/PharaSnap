@@ -20,7 +20,6 @@ import com.alchemedy.pharasnap.helper.MessageHandler;
 import com.alchemedy.pharasnap.utils.AccessibilityHandler;
 import com.alchemedy.pharasnap.utils.WidgetController;
 import com.alchemedy.pharasnap.widgets.WalkthroughSlider;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import java.util.ArrayList;
 
@@ -34,7 +33,9 @@ public class MainActivity extends ThemeActivity {
     private void addTutorials(boolean isTutorialRestart) {
         pages.add(0, new WalkthroughSlider.PageContent(R.string.introduction, "Introduction"));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            WalkthroughSlider.PageContent secondPage = new WalkthroughSlider.PageContent(R.string.add_tile_description, "Notification Shortcut");
+            pages.add(new WalkthroughSlider.PageContent(R.string.add_tile_description_1, "Launch Shortcuts"));
+            WalkthroughSlider.PageContent secondPage = new WalkthroughSlider.PageContent(R.string.add_tile_description_2, "Notification Shortcut")
+                    .onDrawGraphics(R.layout.tutorial_graphic_tile_service_lottie);
             if (!isTutorialRestart) {
                 secondPage
                         .setButtonText("Skip", true)
@@ -60,15 +61,17 @@ public class MainActivity extends ThemeActivity {
 
             pages.add(secondPage);
         }
+//        pages.add(new WalkthroughSlider.PageContent(R.string.add_tile_tutorial_title, "Adding tile")
+//                .onDrawGraphics(R.layout.tutorial_graphic_tile_service_lottie));
         pages.add(new WalkthroughSlider.PageContent(
-                R.string.capturing_modes_tutorial,
-                "Capture Modes"
+                R.string.screenshot_capture_mode,
+                "Screenshot capture mode"
         ).onDrawGraphics(R.layout.tutorial_graphic_controls));
         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.R)
             pages.add(new WalkthroughSlider.PageContent(R.string.media_projection_request_explanation, "Usage of Media Projection"));
     }
 
-    private void showWalkthroughSlider() {
+    private void showWalkthroughSlider(boolean shouldLaunchTutorialOnComplete) {
         setContentView(R.layout.introduction_layout);
         walkthroughSlider = findViewById(R.id.walkthrough_slider);
         walkthroughSlider.start(pages, new WalkthroughSlider.EventHandler() {
@@ -87,7 +90,7 @@ public class MainActivity extends ThemeActivity {
                     startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
                     return true;
                 }
-                if (id == R.string.add_tile_description) {
+                if (id == R.string.add_tile_description_2) {
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("Are you sure ?")
                             .setMessage(R.string.add_tile_requirement)
@@ -106,9 +109,11 @@ public class MainActivity extends ThemeActivity {
             public void onComplete() {
                 showMainMenu();
                 pages.clear();
-                sharedPreferences.edit().putBoolean(Constants.IS_TUTORIAL_SHOWN, true).apply();
-                WidgetController.launchWidget(MainActivity.this, true, false, true);
-                startActivity(new Intent(MainActivity.this, TutorialActivity.class));
+                if (shouldLaunchTutorialOnComplete) {
+                    sharedPreferences.edit().putBoolean(Constants.IS_TUTORIAL_SHOWN, true).apply();
+                    WidgetController.launchWidget(MainActivity.this, true, false, true);
+                    startActivity(new Intent(MainActivity.this, TutorialActivity.class));
+                }
             }
         });
     }
@@ -144,7 +149,7 @@ public class MainActivity extends ThemeActivity {
         });
         findViewById(R.id.restart_tutorial).setOnClickListener(v -> {
             addTutorials(true);
-            showWalkthroughSlider();
+            showWalkthroughSlider(true);
         });
         findViewById(R.id.rate_app).setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + getPackageName()))));
     }
@@ -162,13 +167,14 @@ public class MainActivity extends ThemeActivity {
                     needToDisplayInitialWalkthrough ? R.string.accessibility_requirement_description_first_time : R.string.accessibility_requirement_description,
                     needToDisplayInitialWalkthrough ? "Accessibility Service Required" : "Enable Accessibility Service"
             )
+                    .alignTextStart()
                     .setButtonText(needToDisplayInitialWalkthrough ? "Grant Accessibility Access" : "Enable Accessibility", false));
 
         if(needToDisplayInitialWalkthrough) {
             addTutorials(false);
         }
         if (!pages.isEmpty())
-            showWalkthroughSlider();
+            showWalkthroughSlider(needToDisplayInitialWalkthrough);
         else
             showMainMenu();
     }

@@ -15,7 +15,6 @@
         android:background="@drawable/text_selection_window"
         android:paddingTop="18dp"
         android:layout_width="match_parent"
-        android:minHeight="@dimen/modal_min_height"
         android:layout_height="wrap_content">
         <LinearLayout
             android:layout_width="match_parent"

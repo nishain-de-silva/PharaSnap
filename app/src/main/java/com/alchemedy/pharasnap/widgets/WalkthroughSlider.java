@@ -32,6 +32,7 @@ public class WalkthroughSlider extends LinearLayout {
 
         String buttonTitle, title;
         int contentId;
+        boolean isTextAlignStart = false;
         boolean canRevisit = true;
 
         AttachedStateListener attachedStateListener;
@@ -39,6 +40,11 @@ public class WalkthroughSlider extends LinearLayout {
         public PageContent(int contentId, String title) {
             this.contentId = contentId;
             this.title = title;
+        }
+
+        public PageContent alignTextStart() {
+            isTextAlignStart = true;
+            return this;
         }
 
         public PageContent onAttachStateChanged(AttachedStateListener attachedStateListener) {
@@ -64,14 +70,17 @@ public class WalkthroughSlider extends LinearLayout {
     }
 
     private String getDefaultButtonText() {
-        return  currentIndex == (list.size() - 1) ? (list.size() == 1 ? "Continue" : "Finish") : "Next";
+        return  currentIndex == (list.size() - 1) ? (list.size() == 1 ? "Continue" : "Complete") : "Next";
     }
     private void loadPage(boolean animateForwardDirection, boolean isAnimating) {
         int initialWidth = getWidth();
         removeAllViews();
         PageContent page = list.get(currentIndex);
         ViewGroup inflatedPage = (ViewGroup) LayoutInflater.from(getContext()).inflate(R.layout.walkthrough_page, null);
-        ((TextView) inflatedPage.findViewById(R.id.page_content)).setText(page.contentId);
+        TextView textContent = inflatedPage.findViewById(R.id.page_content);
+        textContent.setText(page.contentId);
+        if (page.isTextAlignStart)
+            textContent.setTextAlignment(TEXT_ALIGNMENT_TEXT_START);
         inflatedPage.findViewById(R.id.task_complete_indicator).setVisibility(GONE);
         TextView paginationIndicator = inflatedPage.findViewById(R.id.pagination_indicator);
         ViewGroup visualContainer = inflatedPage.findViewById(R.id.page_visual_content);

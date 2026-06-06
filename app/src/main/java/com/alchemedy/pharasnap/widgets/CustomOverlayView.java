@@ -14,6 +14,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -35,9 +36,14 @@ public class CustomOverlayView extends FrameLayout {
     private int highlightFillColor = Color.parseColor("#6430C5FF");
     private int highlightStrokeColor = Color.parseColor("#30C5FF");
     private final int PRIMARY_STROKE_WIDTH = 3;
+    public interface OnLostFocusListener {
+        void onLostFocus();
+    }
 //    private Rect dot = null;
 
     private OnTapListener onTapListener;
+    private OnLostFocusListener onLostFocusListener;
+
     public CoordinateF lastTapCoordinate;
     private OnDismissListener onDismissListener;
     ArrayList<RectF> selections = new ArrayList<>();
@@ -64,6 +70,18 @@ public class CustomOverlayView extends FrameLayout {
         initPaint();
     }
 
+    public void setOnLostFocusListener(OnLostFocusListener onLostFocusListener) {
+        this.onLostFocusListener = onLostFocusListener;
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        super.onWindowFocusChanged(hasWindowFocus);
+        if (!hasWindowFocus && onLostFocusListener != null) {
+            onLostFocusListener.onLostFocus();
+            onLostFocusListener = null;
+        }
+    }
 
     private void initPaint() {
         paint = new Paint();

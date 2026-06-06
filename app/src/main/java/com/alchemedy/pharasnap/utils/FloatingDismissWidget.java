@@ -12,6 +12,7 @@ import android.view.WindowManager;
 import com.alchemedy.pharasnap.R;
 import com.alchemedy.pharasnap.models.TutorialAction;
 import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
+import com.alchemedy.pharasnap.utils.Tutorial.TutorialGuide;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 
 public class FloatingDismissWidget {
@@ -32,6 +33,7 @@ public class FloatingDismissWidget {
     }
 
     public void onGestureStarted() {
+        if(TutorialGuide.isTutorialRunning()) return;
         ValueAnimator.AnimatorUpdateListener newUpdateListener = valueAnimator -> {
             float amount = (float) valueAnimator.getAnimatedValue();
             dismissWidgetButtonParams.y = (int) (amount);
@@ -93,6 +95,7 @@ public class FloatingDismissWidget {
     }
 
     public boolean onGestureReleased(EnableButton enableButton, WindowManager.LayoutParams params) {
+        if(TutorialGuide.isTutorialRunning()) return false;
         int[] enableButtonLocation = new int[2];
         enableButton.getLocationOnScreen(enableButtonLocation);
         boolean shouldStopWidget = dismissButtonLocationOnScreen != null && (

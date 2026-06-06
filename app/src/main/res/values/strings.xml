@@ -22,13 +22,14 @@
         \nOn accessibility settings go to installed / Downloaded Apps > Select PharaSnap and switch the toggle button to \'on\' state to grant accessibility service.
     </string>
     <string name="troubleshoot_button_label">Not detecting text? try troubleshoot</string>
-    <string name="introduction">PharaSnap can help you copy text on the screen even on places where you don\'t have the facility directly copy text to clipboard. PharaSnap can even capture text on images without ever leaving the app</string>
-    <string name="add_tile_description">To make this tool easily accessible to use it is recommended to add the quick settings shortcut in your notification panel. Open your notification panel, in the top section (quick settings panel) then tap to customize the panel and add the shortcut tile provided by this app to the active area. Drag and place it on a convenient place
-        \n\nAnother way to open the widget is by hold pressing the app launch icon which prompt you open the widget.
+    <string name="introduction">PharaSnap can help you select and copy text anywhere on the screen. PharaSnap can also copy text inside images and browse word definition all with a single tap</string>
+    <string name="add_tile_description_1">To make PharaSnap easily usable from anywhere add the quick tile shortcut in the notification panel or you can configure to launch by long pressing system navigation button later in the settings
     </string>
+    <string name="add_tile_description_2">Simply open notification panel and add PharaSnap quick shortcut. (This may be slightly different from device to device)</string>
     <string name="add_tile_requirement">Quick launching from quick settings in notification tiles is the most recommended way to launch/open this tool because it is very quicker and you don\'t switch between apps, simply slide down the notification tile panel and tap the shortcut button</string>
     <string name="media_projection_request_explanation">PharaSnap may wants to read visual content of the screen you will be for requested for allowing screen capture as a method to capture screenshot of the screen. Almost every time PharaSnap want to see the screen visually on demand for capturing cropped screenshots and recognizing text on images</string>
-    <string name="capturing_modes_tutorial">PharaSnap has two modes text and picture mode. In text mode you can select and copy text - even text on images. In Picture mode you capture image of the specific element on the screen in a single tap.</string>
+    <string name="screenshot_capture_mode">PharaSnap can also capture cropped screenshot by simply tapping the image on screen - no manual cropping needed</string>
+    <string name="add_tile_tutorial_title">Add Tile on Notification Panel</string>
     <string name="developer_note">This is an app developed by single person. If love this app useful I would like to hear your feedback and thoughts.</string>
     <string name="main_menu_list">main menu list</string>
     <string name="tile_label">Capture text</string>

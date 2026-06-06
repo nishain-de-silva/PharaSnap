@@ -61,9 +61,11 @@
     <style name="Theme.PharaSnap.TransparentActivity" parent="Theme.AppCompat.Dialog">
         <item name="android:backgroundDimEnabled">false</item>
         <item name="windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
     </style>
     <style name="Theme.PharaSnap.EditTextModal" parent="Theme.PharaSnap.TransparentActivity">
         <item name="android:fontFamily">@font/primary</item>
+        <item name="buttonStyle">@style/Theme.PharaSnap.Button</item>
     </style>
 
     <style name="Theme.PharaSnap.Activity" parent="Theme.PharaSnap">

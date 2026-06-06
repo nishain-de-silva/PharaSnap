@@ -355,7 +355,7 @@ public class WidgetController {
                 params.width = WindowManager.LayoutParams.WRAP_CONTENT;
                 params.gravity = Gravity.CENTER_VERTICAL | (isWidgetLeftOriented ? Gravity.START : Gravity.END);
                 params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-                overlayView.post(() -> TutorialGuide.trigger(TutorialAction.PAUSE_TUTORIAL));
+                overlayView.post(TutorialGuide::clearResources);
                 windowManager.updateViewLayout(overlayView, params);
             }
         });

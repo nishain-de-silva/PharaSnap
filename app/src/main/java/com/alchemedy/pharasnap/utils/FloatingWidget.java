@@ -50,6 +50,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -70,7 +71,6 @@ import com.alchemedy.pharasnap.models.TutorialAction;
 import com.alchemedy.pharasnap.services.NodeExplorerAccessibilityService;
 import com.alchemedy.pharasnap.services.ShortcutTileLauncher;
 import com.alchemedy.pharasnap.utils.Tutorial.TutorialGuide;
-import com.alchemedy.pharasnap.widgets.BrowserModal;
 import com.alchemedy.pharasnap.widgets.CustomOverlayView;
 import com.alchemedy.pharasnap.widgets.EnableButton;
 import com.alchemedy.pharasnap.widgets.SelectionEditorTextView;
@@ -96,6 +96,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class FloatingWidget {
     public static class Mode {
@@ -130,7 +131,7 @@ public class FloatingWidget {
     private ImageReader imageReader = null;
     private ClipboardManager clipboardManager;
     private BottomBar bottomBar;
-    private BrowserModal browserModal;
+    private BrowserClient browserClient;
     private VirtualDisplay mediaProjectionDisplay;
     private boolean isAccessibilityServiceBusy;
     private ArrayList<CopiedItem> collectedTexts = null;
@@ -220,16 +221,16 @@ public class FloatingWidget {
         clipboardManager.setPrimaryClip(ClipData.newPlainText("copied text", text));
     }
     void setupEditTextContentModal(SelectionEditorTextView selectedText, TextChangedListener textChangedListener) {
-        if (TutorialGuide.trigger(TutorialAction.GENERAL_FORHIBIDDEN_ACTION_ON_TUTORIAL))
-            return;
+        if (TutorialGuide.trigger(TutorialAction.START_EDIT_TEXT_CONTENT)) return;
         messageHandler
                 .registerReceiverOnce(new BroadcastReceiver() {
                     @Override
                     public void onReceive(Context context, Intent intent) {
                         overlayView.setVisibility(View.VISIBLE);
-                        if (intent.hasExtra(Constants.SHOULD_CLOSE_MODAL)) {
-                            if (intent.getBooleanExtra(Constants.SHOULD_CLOSE_MODAL, false))
-                                modal.closeModal();
+                        TutorialGuide.changePrimaryOverlay(rootOverlay, false);
+                        if (intent.hasExtra(Constants.CLOSE_PARENT_MODAL)) {
+                            if (intent.getBooleanExtra(Constants.CLOSE_PARENT_MODAL, false))
+                                modal.closeImmediately();
                             return;
                         }
                         String newText = intent.getStringExtra(Constants.PAYLOAD_EDIT_TEXT);
@@ -249,7 +250,6 @@ public class FloatingWidget {
         modal.showModal(Modal.ModalType.EDIT_SELECTION, new Modal.ModalCallback() {
             String editedText = null;
             SelectionEditorTextView selectedText;
-
             @Override
             public void onHeaderBackPressed(Modal modal) {
                 if (isDraftText)
@@ -265,13 +265,30 @@ public class FloatingWidget {
             @Override
             public void onBeforeModalShown(ViewGroup inflatedView) {
                 selectedText = inflatedView.findViewById(R.id.selectedText);
+                selectedText.setSelectedChangedListener(selectedText -> {
+                    String[] words = selectedText.split(" ");
+                    int wordCount = 0;
+                    for (String word : words) {
+                        if (!word.isEmpty())
+                            wordCount++;
+                    }
+                    int newVisibility = wordCount > 5 ? View.GONE : View.VISIBLE;
+                    View webBrowsingButton = inflatedView.findViewById(R.id.action_search_web);
+                    if (webBrowsingButton.getVisibility() != newVisibility) {
+                        webBrowsingButton.post(() -> {
+                            if (newVisibility == View.VISIBLE) {
+                                TutorialGuide.trigger(TutorialAction.SELECT_FEW_WORDS_ON_TEXT_SELECTION);
+                            } else
+                                TutorialGuide.cancelTrigger(TutorialAction.SELECT_FEW_WORDS_ON_TEXT_SELECTION);
+                            TutorialGuide.relayout();
+                        });
+                        webBrowsingButton.setVisibility(newVisibility);
+                    }
+                });
                 selectedText.changeText(text);
                 inflatedView.findViewById(R.id.action_copy_entire_text).setOnClickListener(v -> selectedText.selectAllText());
                 inflatedView.findViewById(R.id.action_search_web).setOnClickListener(v -> {
-                    if (TutorialGuide.trigger(TutorialAction.GENERAL_FORHIBIDDEN_ACTION_ON_TUTORIAL))
-                        return;
-                    modal.closeModal();
-                    browserModal.show(selectedText.getSelectedText());
+                    browserClient.show(selectedText.getSelectedText(), modal);
                 });
                 inflatedView.findViewById(R.id.action_copy_selected_text).setOnClickListener(v -> {
                     String text = selectedText.getSelectedText();
@@ -291,7 +308,6 @@ public class FloatingWidget {
             }
         });
     }
-
 
     void showEntryList(@Nullable EditedTextEntry updatedTextEntry) {
         KeyguardManager keyguardManager = (KeyguardManager) hostingService.getSystemService(Context.KEYGUARD_SERVICE);
@@ -326,6 +342,9 @@ public class FloatingWidget {
                     throw new RuntimeException(e);
                 }
                 ListView listView = inflatedView.findViewById(R.id.entry_list);
+                if (TutorialGuide.isTutorialRunning() && items.isEmpty()) {
+                    items.add(new EntryListAdapter.Item("Tutorial copied text", false));
+                }
                 EntryListAdapter adapter = new EntryListAdapter(hostingService, items, new EntryListAdapter.OnTapListener() {
                     @Override
                     public void onTap(int index, EntryListAdapter.Item item) {
@@ -335,8 +354,6 @@ public class FloatingWidget {
 
                     @Override
                     public void onTapCopyToClipboardShortcut(int index, EntryListAdapter.Item item) {
-                        if (TutorialGuide.trigger(TutorialAction.GENERAL_FORHIBIDDEN_ACTION_ON_TUTORIAL))
-                            return;
                         copyTextAndDismiss(item.content, item.isDraft);
                     }
 
@@ -354,6 +371,8 @@ public class FloatingWidget {
                     }
                 });
                 inflatedView.findViewById(R.id.list_clear).setOnClickListener(v -> {
+                    if (TutorialGuide.trigger(TutorialAction.RESTRICTED_ACTION_ON_TUTORIAL))
+                        return;
                     adapter.clear();
                     sharedPreferences.edit().remove(Constants.ENTRIES_KEY).apply();
                 });
@@ -367,6 +386,8 @@ public class FloatingWidget {
     }
 
     void copyTextAndDismiss(String text, boolean shouldStoreText) {
+        if (TutorialGuide.trigger(TutorialAction.RESTRICTED_ACTION_ON_TUTORIAL))
+            return;
         if (shouldStoreText)
             saveTextToStorageIfNeeded(text);
         else
@@ -410,7 +431,6 @@ public class FloatingWidget {
     private void toggleExpandWidget() {
         if (isWidgetExpanded) {
             modal.closeImmediately();
-            browserModal.closeImmediately();
             clearAllSelections(true);
             widgetController.close();
             startCountdownToTerminateMediaProjection();
@@ -445,10 +465,24 @@ public class FloatingWidget {
             systemNavigationButtonTapListener = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
+                    int overlayVisibility = overlayView.getVisibility();
                     if (isWidgetExpanded) {
-                        if (overlayView.getVisibility() != View.VISIBLE)
-                            overlayView.setVisibility(View.VISIBLE);
-                        toggleExpandWidget();
+                        if (overlayVisibility == View.VISIBLE) {
+                            if (Objects.equals(intent.getAction(), Intent.ACTION_SCREEN_OFF))
+                                TutorialGuide.clearResources();
+                            TutorialGuide.notifyAttemptToCloseWidget(() -> toggleExpandWidget());
+                        } else if (Objects.equals(intent.getAction(), Intent.ACTION_CLOSE_SYSTEM_DIALOGS)) {
+                            TutorialGuide.notifyAttemptToCloseWidget(() -> {
+                                TutorialGuide.changePrimaryOverlay(rootOverlay, false);
+                                overlayView.setVisibility(View.VISIBLE);
+                                toggleExpandWidget();
+                            });
+                        }
+                    } else {
+                        if (Objects.equals(intent.getAction(), Intent.ACTION_CLOSE_SYSTEM_DIALOGS))
+                            TutorialGuide.notifyAttemptToCloseWidget(() -> toggleExpandWidget());
+                        else
+                            TutorialGuide.clearResources();
                     }
                 }
             };
@@ -459,7 +493,7 @@ public class FloatingWidget {
         }
     }
 
-    private boolean clearAllSelections(boolean shouldStoreLastText) {
+    public boolean clearAllSelections(boolean shouldStoreLastText) {
         bottomBar.resetTranslation();
         if (mode == Mode.CROPPED_IMAGE_CAPTURE) {
             return rootOverlay.clearAllSelections();
@@ -599,7 +633,7 @@ public class FloatingWidget {
         windowManager.addView(overlayView, params);
         // Find the button in the overlay
         rootOverlay = overlayView.findViewById(R.id.rootOverlay);
-        browserModal = new BrowserModal(rootOverlay);
+        browserClient = new BrowserClient(overlayView, rootOverlay);
 
         ImageButton listButton = overlayView.findViewById(R.id.list);
         ImageButton stopButton = overlayView.findViewById(R.id.stop);
@@ -627,7 +661,9 @@ public class FloatingWidget {
                 return;
             setTextRecognitionMode(mode == Mode.TEXT ? Mode.CROPPED_IMAGE_CAPTURE : Mode.TEXT, false);
         });
-        stopButton.setOnClickListener(v -> onStopWidget());
+        stopButton.setOnClickListener(v -> {
+            TutorialGuide.notifyAttemptToCloseWidget(this::onStopWidget);
+        });
         listButton.setOnClickListener(v -> {
             if (TutorialGuide.trigger(TutorialAction.HISTORY_BUTTON_SELECT))
                 return;
@@ -678,41 +714,37 @@ public class FloatingWidget {
                     }
                 }
 
-                overlayView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
-                    @Override
-                    public void onLayoutChange(View view, int i, int i1, int i2, int i3, int i4, int i5, int i6, int i7) {
-                        overlayView.removeOnLayoutChangeListener(this);
-                        getNodeResult(tappedCoordinate.x, tappedCoordinate.y, isLongPress, new NodeCapturedCallback() {
-                            @Override
-                            void onResult(@Nullable NodeResult result) {
-                                // ...regain focus to overlay view to capture key event on system navigation back press
-                                params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
-                                windowManager.updateViewLayout(overlayView, params);
+                rootOverlay.setOnLostFocusListener(() -> {
+                    getNodeResult(tappedCoordinate.x, tappedCoordinate.y, isLongPress, new NodeCapturedCallback() {
+                        @Override
+                        void onResult(@Nullable NodeResult result) {
+                            // ...regain focus to overlay view to capture key event on system navigation back press
+                            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+                            windowManager.updateViewLayout(overlayView, params);
 
-                                if (isLongPress) {
-                                    if (result != null) {
-                                        if (TutorialGuide.trigger(TutorialAction.LONG_PRESS_WORD)) return;
-                                        browserModal.show(result.text);
-                                    }
-                                    isAccessibilityServiceBusy = false;
-                                    return;
+                            if (isLongPress) {
+                                if (result != null) {
+                                    if (TutorialGuide.trigger(TutorialAction.LONG_PRESS_WORD)) return;
+                                    browserClient.show(result.text, null);
                                 }
-
-                                if (result == null) {
-                                    showResult(null);
-                                    isAccessibilityServiceBusy = false;
-                                    return;
-                                }
-
-                                if (mode == Mode.CROPPED_IMAGE_CAPTURE) {
-                                    captureScreenshot(result.bound, (int) tappedCoordinate.x, (int) tappedCoordinate.y, false, null);
-                                } else {
-                                    showResult(new CopiedItem(result.text, result.bound, result.isOCRText));
-                                    isAccessibilityServiceBusy = false;
-                                }
+                                isAccessibilityServiceBusy = false;
+                                return;
                             }
-                        });
-                    }
+
+                            if (result == null) {
+                                showResult(null);
+                                isAccessibilityServiceBusy = false;
+                                return;
+                            }
+
+                            if (mode == Mode.CROPPED_IMAGE_CAPTURE) {
+                                captureScreenshot(result.bound, (int) tappedCoordinate.x, (int) tappedCoordinate.y, false, null);
+                            } else {
+                                showResult(new CopiedItem(result.text, result.bound, result.isOCRText));
+                                isAccessibilityServiceBusy = false;
+                            }
+                        }
+                    });
                 });
 
                 params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
@@ -735,10 +767,8 @@ public class FloatingWidget {
             protected void onDismiss() {
                 if(isWidgetExpanded
                         && !modal.handleSystemGoBack()
-                        && !browserModal.close()
-                        && !TutorialGuide.trigger(TutorialAction.GENERAL_FORHIBIDDEN_ACTION_ON_TUTORIAL)
                 )
-                    toggleExpandWidget();
+                    TutorialGuide.notifyAttemptToCloseWidget(() -> toggleExpandWidget());
             }
         });
         notifyStateOnQuickTile(true);
@@ -755,15 +785,19 @@ public class FloatingWidget {
         enableButton.configure(new EnableButton.TouchDelegateListener() {
             @Override
             public void onTap(CoordinateF tappedCoordinate) {
-                toggleExpandWidget();
+                if (isWidgetExpanded) {
+                    TutorialGuide.notifyAttemptToCloseWidget(() -> toggleExpandWidget());
+                } else
+                    toggleExpandWidget();
             }
 
             @Override
             public void onDragGestureStarted() {
                 if (isWidgetExpanded)
                     TutorialGuide.trigger(TutorialAction.MOVE_WIDGET_BUTTON);
-                else
+                else {
                     floatingDismissWidget.onGestureStarted();
+                }
             }
 
             @Override
@@ -1291,7 +1325,6 @@ public class FloatingWidget {
             notifyStateOnQuickTile(false);
     }
     private void onStopWidget() {
-        if (TutorialGuide.trigger(TutorialAction.STOP_WIDGET)) return;
         hostingService.onStopWidget();
     }
 

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/modal_backdrop"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal"
+        android:weightSum="10"
+        android:gravity="end"
+        android:background="@color/backdrop">
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="5">
+            <androidx.cardview.widget.CardView
+                android:id="@+id/browser_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="bottom"
+                android:background="@drawable/browser_background"
+                app:cardCornerRadius="20dp">
+                <WebView
+                    android:id="@+id/webView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+                <LinearLayout
+                    android:id="@+id/no_network_indicator"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:background="@android:color/white"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="20dp">
+                    <TextView
+                        android:id="@+id/browser_error_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="No Network Connection"
+                        android:textColor="@color/darkPurple"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/browser_error_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="12dp"
+                        android:text="There seems to be an default issue with your network connectivity"
+                        android:textAlignment="center"
+                        android:textColor="@color/darkPurple" />
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/page_reload"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="reload page" />
+                </LinearLayout>
+                <FrameLayout
+                    android:id="@+id/browser_loader"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/primaryBlue"
+                    android:paddingVertical="1dp">
+                    <ProgressBar
+                        android:indeterminate="true"
+                        android:indeterminateDrawable="@drawable/indeterminate_progress"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp" />
+                </FrameLayout>
+            </androidx.cardview.widget.CardView>
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

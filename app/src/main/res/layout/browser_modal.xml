@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/modal_backdrop"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+<LinearLayout
     android:layout_height="match_parent"
+    android:layout_width="match_parent"
     android:layout_gravity="center_horizontal"
+    android:orientation="vertical"
     android:background="@color/backdrop"
-    android:layout_width="match_parent">
-    <!--WebView get inflated inside the browser_container cardView-->
+    android:gravity="bottom"
+    android:weightSum="10">
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="6">
     <androidx.cardview.widget.CardView
         android:id="@+id/browser_container"
         android:layout_gravity="bottom"
@@ -51,14 +60,20 @@
                 android:text="reload page"
                 />
         </LinearLayout>
-        <ProgressBar
+        <FrameLayout
             android:id="@+id/browser_loader"
-            android:indeterminate="true"
-            android:indeterminateTint="@color/darkPurple"
-            style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-
+            android:layout_height="wrap_content"
+            android:background="@color/primaryBlue"
+            android:paddingVertical="1dp">
+            <ProgressBar
+                android:indeterminate="true"
+                android:indeterminateDrawable="@drawable/indeterminate_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="2dp" />
+        </FrameLayout>
     </androidx.cardview.widget.CardView>
+    </FrameLayout>
+</LinearLayout>
 </FrameLayout>

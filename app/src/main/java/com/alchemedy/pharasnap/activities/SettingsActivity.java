@@ -81,6 +81,7 @@ public class SettingsActivity extends ThemeActivity {
             indicator.setVisibility(View.VISIBLE);
 
             isActivelyCapturingLongPressingButton = true;
+            Toast.makeText(this, "animating navigation bar", Toast.LENGTH_SHORT).show();
             animateNavigationBar();
             messageHandler.registerReceiverOnce(new BroadcastReceiver() {
                 @Override

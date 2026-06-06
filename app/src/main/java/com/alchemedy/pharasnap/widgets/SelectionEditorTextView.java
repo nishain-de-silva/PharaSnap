@@ -31,6 +31,10 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
     private Path selectedTextPath;
     private float lineSpacingExtra;
     private int cursorWidth;
+    private SelectedChangedListener selectedChangedListener;
+    public interface SelectedChangedListener {
+        void onSelectedTextChanged(String text);
+    }
 
     //    ArrayList<Rect> lineBounds = new ArrayList<>();
     public SelectionEditorTextView(Context context) {
@@ -46,6 +50,10 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
     public SelectionEditorTextView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
+    }
+
+    public void setSelectedChangedListener(SelectedChangedListener selectedChangedListener) {
+        this.selectedChangedListener = selectedChangedListener;
     }
 
     Layout layout;
@@ -261,7 +269,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
                 characterCaseType = 3;
             if(previousCharacterCaseType == 3 && characterCaseType < 3)
                 // if previous character is NOT alphanumeric and this character is
-                // alphanumeric indicating start of an word
+                // alphanumeric indicating show of an word
                 startIndex = i;
             else if (previousCharacterCaseType < 3) {
                 // if previous character is alphanumeric and this character is not
@@ -292,7 +300,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
         endCursor = new CursorPoint(lastIndex, lastIndexLine);
         startCursor = new CursorPoint(0, 0);
         drawTextSelectionPolygon();
-
+        selectedChangedListener.onSelectedTextChanged(originalText.toString());
         setOnTouchListener(new OnTouchListener() {
             CursorSelectionMode selectedCursor = CursorSelectionMode.NOT_SELECTED;
             CoordinateF downCoordinate = new CoordinateF(0, 0);
@@ -373,6 +381,7 @@ public class SelectionEditorTextView extends androidx.appcompat.widget.AppCompat
                     }
                     getParent().requestDisallowInterceptTouchEvent(false);
                     selectedCursor = CursorSelectionMode.NOT_SELECTED;
+                    selectedChangedListener.onSelectedTextChanged(getSelectedText());
                 } else if (action == MotionEvent.ACTION_DOWN) {
                     downCoordinate = new CoordinateF(eventX, eventY);
 
